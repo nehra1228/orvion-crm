@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react";
 
@@ -15,25 +15,105 @@ export default function UserTable({ users }: { users: UserRow[] }) {
 
   async function handleDeleteLeads(userId: string, username: string) {
     if (!window.confirm(`Delete all leads assigned to ${username}?`)) return;
+
     setLoadingUserId(userId);
 
     try {
       const response = await fetch(`/api/admin/users/${userId}/leads`, {
         method: "DELETE",
       });
+
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data?.message || "Failed to delete leads.");
+        alert(data.message);
       } else {
-        alert(`Deleted ${data.deleted} leads for ${username}.`);
-        window.location.reload();
+        alert(`Deleted ${data.deleted} leads`);
+        location.reload();
       }
-    } catch (error) {
-      alert("Failed to delete leads.");
     } finally {
       setLoadingUserId(null);
     }
+  }
+
+  async function editUser(user: UserRow) {
+    const username = prompt("Username", user.username);
+    if (!username) return;
+
+    const email = prompt("Email", "");
+
+    const active = confirm("Should this user remain active?");
+
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        email,
+        active,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
+
+    alert("User updated");
+    location.reload();
+  }
+
+  async function changePassword(user: UserRow) {
+    const password = prompt("New Password");
+
+    if (!password) return;
+
+    const res = await fetch(`/api/admin/users/${user.id}/password`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        password,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
+
+    alert("Password updated");
+  }
+
+  async function deleteUser(user: UserRow) {
+    if (
+      !confirm(
+        `Delete executive "${user.username}"?\n\nDelete Leads first if required.`
+      )
+    )
+      return;
+
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "DELETE",
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message);
+      return;
+    }
+
+    alert("Executive deleted");
+
+    location.reload();
   }
 
   return (
@@ -48,25 +128,62 @@ export default function UserTable({ users }: { users: UserRow[] }) {
             <th className="px-4 py-3">Actions</th>
           </tr>
         </thead>
+
         <tbody>
           {users.map((user) => (
-            <tr key={user.id} className="border-t border-slate-800 hover:bg-slate-950">
+            <tr
+              key={user.id}
+              className="border-t border-slate-800 hover:bg-slate-950"
+            >
               <td className="px-4 py-4 text-white">{user.username}</td>
-              <td className="px-4 py-4 text-slate-300">{user.role}</td>
-              <td className="px-4 py-4 text-slate-300">{user.active ? "Yes" : "No"}</td>
-              <td className="px-4 py-4 text-slate-400">{new Date(user.createdAt).toLocaleDateString()}</td>
+
+              <td className="px-4 py-4">{user.role}</td>
+
+              <td className="px-4 py-4">
+                {user.active ? "Yes" : "No"}
+              </td>
+
+              <td className="px-4 py-4">
+                {new Date(user.createdAt).toLocaleDateString()}
+              </td>
+
               <td className="px-4 py-4">
                 {user.role === "EXECUTIVE" ? (
-                  <button
-                    type="button"
-                    disabled={loadingUserId === user.id}
-                    onClick={() => handleDeleteLeads(user.id, user.username)}
-                    className="rounded-2xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {loadingUserId === user.id ? "Deleting…" : "Delete leads"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+
+                    <button
+                      onClick={() =>
+                        handleDeleteLeads(user.id, user.username)
+                      }
+                      className="rounded bg-red-600 px-2 py-1 text-white"
+                    >
+                      Delete Leads
+                    </button>
+
+                    <button
+                      onClick={() => editUser(user)}
+                      className="rounded bg-blue-600 px-2 py-1 text-white"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => changePassword(user)}
+                      className="rounded bg-purple-600 px-2 py-1 text-white"
+                    >
+                      Password
+                    </button>
+
+                    <button
+                      onClick={() => deleteUser(user)}
+                      className="rounded bg-red-900 px-2 py-1 text-white"
+                    >
+                      Delete
+                    </button>
+
+                  </div>
                 ) : (
-                  <span className="text-slate-500">—</span>
+                  "-"
                 )}
               </td>
             </tr>
