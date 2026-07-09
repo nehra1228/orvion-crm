@@ -1,13 +1,8 @@
 import "dotenv/config";
 import { PrismaClient, Role } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { hashPassword } from "@/lib/auth/password";
 
-const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL ?? "",
-  }),
-});
+const prisma = new PrismaClient();
 
 async function main() {
   const exists = await prisma.user.findUnique({
