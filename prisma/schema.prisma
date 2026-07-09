@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  ADMIN
+  EXECUTIVE
+}
+
+enum LeadStatus {
+  NEW
+  CALLED
+  INTERESTED
+  FOLLOW_UP
+  SITE_VISIT
+  NEGOTIATION
+  BOOKED
+  LOST
+}
+
+enum LeadRemark {
+  INTERESTED
+  NOT_INTERESTED
+  BUSY
+  SWITCH_OFF
+  WRONG_NUMBER
+  CALLBACK
+  NO_ANSWER
+  SITE_VISIT
+  BOOKED
+  LOST
+}
+
+model User {
+  id         String      @id @default(cuid())
+  username   String      @unique
+  email      String?     @unique
+  password   String
+  role       Role
+  active     Boolean     @default(true)
+
+  leads      Lead[]      @relation("ExecutiveLeads")
+  uploads    Upload[]
+  activities Activity[]
+
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Lead {
+  id           String      @id @default(cuid())
+  name         String
+  mobile       String
+  project      String?
+  city         String?
+  source       String?
+  status       LeadStatus  @default(NEW)
+  remark       LeadRemark?
+  notes        String?
+  followUpDate DateTime?
+
+  assignedToId String?
+  assignedTo   User?       @relation("ExecutiveLeads", fields: [assignedToId], references: [id])
+
+  activities   Activity[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Upload {
+  id           String   @id @default(cuid())
+  filename     String
+  totalLeads   Int
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model Activity {
+  id         String      @id @default(cuid())
+  lead       Lead        @relation(fields: [leadId], references: [id])
+  leadId     String
+  user       User        @relation(fields: [userId], references: [id])
+  userId     String
+  oldStatus  LeadStatus?
+  newStatus  LeadStatus?
+  remark     LeadRemark?
+  note       String?
+  createdAt  DateTime    @default(now())
+}
