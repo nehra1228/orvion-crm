@@ -51,30 +51,83 @@ export default function LeftPanel() {
 
       {/* Feature Cards */}
 
-      <div className="space-y-5">
+      <div className="mt-16 space-y-5">
 
-        <FeatureCard
-          icon={BarChart3}
-          title="Live Analytics"
-          description="Monitor executive performance and sales insights in real time."
-          color="bg-blue-500/20 text-blue-400"
-        />
+  {/* System Status */}
 
-        <FeatureCard
-          icon={ShieldCheck}
-          title="Enterprise Security"
-          description="Role-based authentication with enterprise-grade protection."
-          color="bg-emerald-500/20 text-emerald-400"
-        />
+  <div className="flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4">
 
-        <FeatureCard
-          icon={Cpu}
-          title="AI Automation"
-          description="Automated lead routing, follow-ups and CRM workflows."
-          color="bg-violet-500/20 text-violet-400"
-        />
+    <div className="flex items-center gap-3">
 
-      </div>
+      <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
+
+      <span className="text-sm font-medium">
+        System Status
+      </span>
+
+    </div>
+
+    <span className="text-emerald-300 font-semibold">
+      ONLINE
+    </span>
+
+  </div>
+
+  {/* Stats */}
+
+  <div className="grid grid-cols-2 gap-4">
+
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+
+      <p className="text-3xl font-black text-cyan-400">
+        8,452
+      </p>
+
+      <p className="mt-2 text-sm text-slate-400">
+        Active Leads
+      </p>
+
+    </div>
+
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+
+      <p className="text-3xl font-black text-yellow-400">
+        ₹428Cr
+      </p>
+
+      <p className="mt-2 text-sm text-slate-400">
+        Pipeline
+      </p>
+
+    </div>
+
+  </div>
+
+  {/* Uptime */}
+
+  <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+
+    <div className="flex items-center justify-between">
+
+      <span className="text-slate-400">
+        System Uptime
+      </span>
+
+      <span className="text-cyan-400 font-bold">
+        99.98%
+      </span>
+
+    </div>
+
+    <div className="mt-4 h-2 rounded-full bg-slate-800 overflow-hidden">
+
+      <div className="h-full w-[99%] rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" />
+
+    </div>
+
+  </div>
+
+</div>
 
       {/* Footer */}
 
