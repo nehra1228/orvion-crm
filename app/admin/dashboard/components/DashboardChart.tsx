@@ -9,17 +9,16 @@ import {
   XAxis,
 } from "recharts";
 
-const data = [
-  { day: "Mon", leads: 18 },
-  { day: "Tue", leads: 27 },
-  { day: "Wed", leads: 21 },
-  { day: "Thu", leads: 34 },
-  { day: "Fri", leads: 29 },
-  { day: "Sat", leads: 42 },
-  { day: "Sun", leads: 31 },
-];
+type ChartPoint = {
+  day: string;
+  leads: number;
+};
 
-export default function DashboardChart() {
+type Props = {
+  data: ChartPoint[];
+};
+
+export default function DashboardChart({ data }: Props) {
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
       <h2 className="text-xl font-semibold text-white">
@@ -27,7 +26,7 @@ export default function DashboardChart() {
       </h2>
 
       <p className="mt-1 text-sm text-slate-400">
-        Last 7 days
+        Last 7 Days
       </p>
 
       <div className="mt-6 h-80">
@@ -43,6 +42,7 @@ export default function DashboardChart() {
             <Tooltip />
 
             <Area
+              type="monotone"
               dataKey="leads"
               stroke="#3b82f6"
               fill="#2563eb55"

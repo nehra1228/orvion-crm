@@ -12,15 +12,24 @@ export default async function Dashboard() {
   const totalExecutives = await prisma.user.count({
     where: { role: "EXECUTIVE", active: true },
   });
+const totalLeads = await prisma.lead.count();
 
-  const totalLeads = await prisma.lead.count();
-  const newLeads = await prisma.lead.count({
-    where: { status: "NEW" },
-  });
-  const assignedLeads = await prisma.lead.count({
-    where: { assignedToId: { not: null } },
-  });
-  const recentLeads = await prisma.lead.findMany({
+const newLeads = await prisma.lead.count({
+  where: { status: "NEW" },
+});
+
+const assignedLeads = await prisma.lead.count({
+  where: { assignedToId: { not: null } },
+});
+
+const leadTrend = [
+  {
+    day: "Today",
+    leads: totalLeads,
+  },
+];
+
+const recentLeads = await prisma.lead.findMany({
   orderBy: {
     createdAt: "desc",
   },
@@ -91,8 +100,8 @@ export default async function Dashboard() {
 
                 <div className="grid gap-6 xl:grid-cols-3">
           <div className="xl:col-span-2">
-            <DashboardChart />
-          </div>
+  <DashboardChart data={leadTrend} />
+</div>
 
           <ExecutiveLeaderboard executives={topExecutives} />
 
