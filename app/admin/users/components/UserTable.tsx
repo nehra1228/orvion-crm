@@ -1,5 +1,7 @@
 "use client";
-
+import EditUserModal from "./EditUserModal";
+import PasswordModal from "./PasswordModal";
+import DeleteUserModal from "./DeleteUserModal";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -28,7 +30,11 @@ export default function UserTable({
 }) {
   const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
 
+const [editOpen, setEditOpen] = useState(false);
+const [passwordOpen, setPasswordOpen] = useState(false);
+const [deleteOpen, setDeleteOpen] = useState(false);
   const filteredUsers = useMemo(() => {
     return users.filter((user) =>
       user.username.toLowerCase().includes(search.toLowerCase())
@@ -65,99 +71,11 @@ export default function UserTable({
     }
   }
 
-  async function editUser(user: UserRow) {
-    const username = prompt("Username", user.username);
+  
 
-    if (!username) return;
+  
 
-    const email = prompt("Email", "");
-
-    const active = confirm(
-      "Should this user remain active?"
-    );
-
-    const response = await fetch(
-      `/api/admin/users/${user.id}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          active,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      toast.error(data.message);
-      return;
-    }
-
-    toast.success("Executive updated");
-
-    location.reload();
-  }
-
-  async function changePassword(user: UserRow) {
-    const password = prompt("New Password");
-
-    if (!password) return;
-
-    const response = await fetch(
-      `/api/admin/users/${user.id}/password`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          password,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      toast.error(data.message);
-      return;
-    }
-
-    toast.success("Password changed successfully");
-  }
-
-  async function deleteUser(user: UserRow) {
-    if (
-      !confirm(
-        `Delete executive "${user.username}"?\n\nDelete Leads first if required.`
-      )
-    ) {
-      return;
-    }
-
-    const response = await fetch(
-      `/api/admin/users/${user.id}`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      toast.error(data.message);
-      return;
-    }
-
-    toast.success("Executive deleted");
-
-    location.reload();
-  }
+  
 
   return (
   <div className="mt-6 overflow-hidden rounded-3xl border border-slate-800 bg-slate-900">
@@ -241,7 +159,10 @@ export default function UserTable({
                   </button>
 
                   <button
-                    onClick={() => editUser(user)}
+                    onClick={() => {
+  setSelectedUser(user);
+  setEditOpen(true);
+}}
                     className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-500"
                   >
                     <Pencil size={15} />
@@ -249,7 +170,10 @@ export default function UserTable({
                   </button>
 
                   <button
-                    onClick={() => changePassword(user)}
+                    onClick={() => {
+  setSelectedUser(user);
+  setPasswordOpen(true);
+}}
                     className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-500"
                   >
                     <KeyRound size={15} />
@@ -257,7 +181,10 @@ export default function UserTable({
                   </button>
 
                   <button
-                    onClick={() => deleteUser(user)}
+                    onClick={() => {
+  setSelectedUser(user);
+  setDeleteOpen(true);
+}}
                     className="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-950"
                   >
                     <Trash2 size={15} />
@@ -285,7 +212,109 @@ export default function UserTable({
           </tr>
         )}
       </tbody>
-    </table>
+        </table>
+
+    <EditUserModal
+      open={editOpen}
+      user={selectedUser}
+      onClose={() => {
+        setEditOpen(false);
+        setSelectedUser(null);
+      }}
+      onSave={async ({ username, email, active }) => {
+        if (!selectedUser) return;
+
+        const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username,
+            email,
+            active,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data.message);
+          return;
+        }
+
+        toast.success("Executive updated");
+
+setEditOpen(false);
+setSelectedUser(null);
+location.reload();
+      }}
+    />
+
+    <PasswordModal
+      open={passwordOpen}
+      onClose={() => {
+        setPasswordOpen(false);
+        setSelectedUser(null);
+      }}
+      onSave={async (password) => {
+        if (!selectedUser) return;
+
+        const res = await fetch(
+          `/api/admin/users/${selectedUser.id}/password`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              password,
+            }),
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data.message);
+          return;
+        }
+
+        toast.success("Password updated");
+
+setPasswordOpen(false);
+setSelectedUser(null);
+      }}
+    />
+
+    <DeleteUserModal
+      open={deleteOpen}
+      username={selectedUser?.username ?? ""}
+      onClose={() => {
+        setDeleteOpen(false);
+        setSelectedUser(null);
+      }}
+      onDelete={async () => {
+        if (!selectedUser) return;
+
+        const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+          method: "DELETE",
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          toast.error(data.message);
+          return;
+        }
+
+        toast.success("Executive deleted");
+
+setDeleteOpen(false);
+setSelectedUser(null);
+location.reload();;
+      }}
+    />
   </div>
 );
 }
