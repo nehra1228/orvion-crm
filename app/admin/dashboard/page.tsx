@@ -6,28 +6,31 @@ import WelcomeCard from "./components/WelcomeCard";
 import LeadTable from "@/app/components/leads/LeadTable";
 import AddLeadModal from "@/app/components/leads/AddLeadModal";
 import StatsCard from "./components/StatsCard";
+import MonthlyLeadsChart from "./components/MonthlyLeadsChart";
 
 export default function DashboardPage() {
   const [openLeadModal, setOpenLeadModal] = useState(false);
 
   return (
-    <DashboardLayout>
-      <div className="space-y-8">
+  <DashboardLayout>
+    <div className="space-y-8">
 
-        <WelcomeCard
-  onCreateLead={() => setOpenLeadModal(true)}
-/>
+      <WelcomeCard
+        onCreateLead={() => setOpenLeadModal(true)}
+      />
 
-<StatsCard />
+      <StatsCard />
 
-<LeadTable />
+      <MonthlyLeadsChart />
 
-<AddLeadModal
-  open={openLeadModal}
-  onClose={() => setOpenLeadModal(false)}
-/>
+      <LeadTable />
 
-      </div>
-    </DashboardLayout>
-  );
+      <AddLeadModal
+        open={openLeadModal}
+        onClose={() => setOpenLeadModal(false)}
+      />
+
+    </div>
+  </DashboardLayout>
+);
 }
