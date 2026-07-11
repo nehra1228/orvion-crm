@@ -37,41 +37,11 @@ const statusColor: Record<string, string> = {
 export default function LeadTable() {
 
   const [search, setSearch] = useState("");
-  const [leads, setLeads] = useState<any[]>([]);
-  const [filteredLeads, setFilteredLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  fetchLeads();
-
-async function deleteLead(id: string) {
-  const confirmed = window.confirm(
-    "Are you sure you want to delete this lead?"
-  );
-
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(`/api/leads/${id}`, {
-      method: "DELETE",
-    });
-
-    if (!res.ok) {
-      throw new Error("Failed to delete lead");
-    }
-
-    await fetchLeads();
-
-    alert("Lead deleted successfully.");
-  } catch (err) {
-    console.error(err);
-    alert("Failed to delete lead.");
-  }
-}
-
-}, []);
-
-useEffect(() => {
   setFilteredLeads(
     leads.filter((lead) =>
       lead.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -119,10 +89,6 @@ async function deleteLead(id: string) {
   }
 }
 
-// Load leads when page opens
-useEffect(() => {
-  fetchLeads();
-}, []);
 
 // Filter leads when search changes
 useEffect(() => {
