@@ -1,90 +1,84 @@
 "use client";
 
-import { Trophy, Medal, Award } from "lucide-react";
+import { useEffect, useState } from "react";
 
-type Executive = {
+interface Executive {
   id: string;
-  username: string;
-  _count: {
-  leads: number;
-};
-};
+  name: string;
+  total: number;
+  interested: number;
+  followUps: number;
+  booked: number;
+}
 
-type Props = {
-  executives: Executive[];
-};
+export default function ExecutiveLeaderboard() {
+  const [executives, setExecutives] = useState<Executive[]>([]);
 
-export default function ExecutiveLeaderboard({
-  executives,
-}: Props) {
+  useEffect(() => {
+    async function load() {
+      const res = await fetch("/api/dashboard/leaderboard", {
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+      setExecutives(data);
+    }
+
+    load();
+  }, []);
+
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-      <h2 className="text-xl font-semibold text-white">
-        Top Executives
+    <div className="rounded-3xl border border-white/10 bg-[#0C101D] p-6">
+      <h2 className="mb-6 text-xl font-bold text-white">
+        Executive Leaderboard
       </h2>
 
-      <p className="mt-1 text-sm text-slate-400">
-        Ranked by assigned leads
-      </p>
+      <div className="space-y-4">
+        {executives.map((user, index) => (
+          <div
+            key={user.id}
+            className="flex items-center justify-between rounded-2xl border border-white/5 bg-[#121827] p-4"
+          >
+            <div>
+              <p className="font-semibold text-white">
+                #{index + 1} {user.name}
+              </p>
 
-      <div className="mt-6 space-y-4">
-        {executives.map((user, index) => {
-          const Icon =
-            index === 0
-              ? Trophy
-              : index === 1
-              ? Medal
-              : Award;
+              <p className="text-sm text-slate-400">
+                Assigned Leads: {user.total}
+              </p>
+            </div>
 
-          const color =
-            index === 0
-              ? "text-yellow-400"
-              : index === 1
-              ? "text-slate-300"
-              : "text-amber-600";
-
-          return (
-            <div
-              key={user.id}
-              className="flex items-center justify-between rounded-2xl bg-slate-950 p-4 transition hover:bg-slate-800"
-            >
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-slate-800 p-3">
-                  <Icon
-                    className={color}
-                    size={20}
-                  />
-                </div>
-
-                <div>
-                  <p className="font-semibold text-white">
-                    {user.username}
-                  </p>
-
-                  <p className="text-sm text-slate-400">
-                    Executive
-                  </p>
-                </div>
+            <div className="flex gap-6 text-center">
+              <div>
+                <p className="text-cyan-400 font-bold">
+                  {user.interested}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Interested
+                </p>
               </div>
 
-              <div className="text-right">
-                <p className="text-xl font-bold text-white">
-                  {user._count.leads}
+              <div>
+                <p className="text-yellow-400 font-bold">
+                  {user.followUps}
                 </p>
-
                 <p className="text-xs text-slate-500">
-                  Assigned Leads
+                  Follow-up
+                </p>
+              </div>
+
+              <div>
+                <p className="text-green-400 font-bold">
+                  {user.booked}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Booked
                 </p>
               </div>
             </div>
-          );
-        })}
-
-        {executives.length === 0 && (
-          <p className="py-8 text-center text-slate-500">
-            No executives found.
-          </p>
-        )}
+          </div>
+        ))}
       </div>
     </div>
   );

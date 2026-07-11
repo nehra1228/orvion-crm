@@ -1,28 +1,54 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
   Tooltip,
+  Legend,
 } from "recharts";
-
-const data = [
-  { name: "Facebook", value: 45 },
-  { name: "Google", value: 30 },
-  { name: "Website", value: 15 },
-  { name: "Referral", value: 10 },
-];
 
 const COLORS = [
   "#3B82F6",
   "#22C55E",
   "#A855F7",
   "#F97316",
+  "#06B6D4",
+  "#EF4444",
+  "#FACC15",
 ];
 
+interface SourceData {
+  name: string;
+  value: number;
+}
+
 export default function LeadSourceChart() {
+  const [data, setData] = useState<SourceData[]>([]);
+
+  useEffect(() => {
+    async function loadSources() {
+      try {
+        const res = await fetch("/api/dashboard/sources", {
+          cache: "no-store",
+        });
+
+        const json = await res.json();
+        setData(json);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    loadSources();
+
+    const interval = setInterval(loadSources, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
       <h2 className="text-xl font-semibold text-white">
@@ -39,10 +65,12 @@ export default function LeadSourceChart() {
             <Pie
               data={data}
               dataKey="value"
+              nameKey="name"
               outerRadius={90}
               innerRadius={55}
+              label
             >
-              {data.map((entry, index) => (
+              {data.map((_, index) => (
                 <Cell
                   key={index}
                   fill={COLORS[index % COLORS.length]}
@@ -51,34 +79,9 @@ export default function LeadSourceChart() {
             </Pie>
 
             <Tooltip />
+            <Legend />
           </PieChart>
         </ResponsiveContainer>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {data.map((item, index) => (
-          <div
-            key={item.name}
-            className="flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <div
-                className="h-3 w-3 rounded-full"
-                style={{
-                  backgroundColor: COLORS[index],
-                }}
-              />
-
-              <span className="text-sm text-slate-300">
-                {item.name}
-              </span>
-            </div>
-
-            <span className="text-sm font-semibold text-white">
-              {item.value}%
-            </span>
-          </div>
-        ))}
       </div>
     </div>
   );
