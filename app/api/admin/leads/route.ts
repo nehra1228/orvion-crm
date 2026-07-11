@@ -1,10 +1,36 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth/session";
 
-export async function DELETE() {
-  await requireUser("ADMIN");
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const body = await req.json();
+    const { id } = await params;
 
-  const result = await prisma.lead.deleteMany({});
-  return NextResponse.json({ deleted: result.count });
+    const lead = await prisma.lead.update({
+      where: {
+        id,
+      },
+      data: {
+        name: body.name,
+        mobile: body.mobile,
+        project: body.project,
+        city: body.city,
+        source: body.source,
+        notes: body.notes,
+        status: body.status,
+      },
+    });
+
+    return NextResponse.json(lead);
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Failed to update lead" },
+      { status: 500 }
+    );
+  }
 }
