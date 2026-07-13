@@ -18,7 +18,7 @@ const tabs: { label: Tab; icon: typeof Building2 }[] = [
   { label: "Notifications", icon: Bell }, { label: "Backup", icon: Database }, { label: "API", icon: FileKey2 }, { label: "About", icon: Info },
 ];
 const initialUsers: User[] = [
-  { id: 1, username: "Administrator", role: "Admin", status: "Active", created: "—" },
+  { id: 1, username: "Administrator", role: "SUPER_ADMIN", status: "Active", created: "—" },
 ];
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {

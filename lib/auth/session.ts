@@ -41,7 +41,7 @@ export async function getCurrentUser() {
   }
 }
 
-export async function requireUser(role: "ADMIN" | "EXECUTIVE") {
+export async function requireUser(role: "SUPER_ADMIN" | "EXECUTIVE") {
   const user = await getCurrentUser();
 
   if (!user) {

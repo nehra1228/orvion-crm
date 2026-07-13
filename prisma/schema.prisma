@@ -8,8 +8,15 @@ datasource db {
 }
 
 enum Role {
-  ADMIN
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  TEAM_LEADER
   EXECUTIVE
+  HR
+  MARKETING
+  ACCOUNTS
+  QA
+  SUPPORT
 }
 
 enum LeadStatus {
