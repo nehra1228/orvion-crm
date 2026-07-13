@@ -1,7 +1,12 @@
 "use client"
 
 import { useMemo, useState } from "react";
-import { MessageSquare, PhoneCall, Save } from "lucide-react";
+import {
+  MessageSquare,
+  PhoneCall,
+  Calendar,
+  FileText,
+} from "lucide-react";
 
 type ExecutiveLead = {
   id: string;
@@ -45,61 +50,56 @@ export default function ExecutiveLeadActions({ initialLeads }: Props) {
   const [remarkSelection, setRemarkSelection] = useState<Record<string, string>>(
     Object.fromEntries(initialLeads.map((lead) => [lead.id, lead.remark || ""]))
   );
-  const [savingLeadId, setSavingLeadId] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+const [notes, setNotes] = useState<Record<string, string>>({});
+
+const [followUps, setFollowUps] = useState<Record<string, string>>({});
 
   const shareFlag = useMemo(
     () => Object.fromEntries(initialLeads.map((lead) => [lead.id, lead.remark === "INTERESTED"])),
     [initialLeads]
   );
 
-  async function handleSave(leadId: string) {
-    const remark = remarkSelection[leadId];
+  async function updateLead(
+  leadId: string,
+  field: string,
+  value: string
+) {
+  setStatusMessage(null);
 
-    if (!remark) {
-      setStatusMessage("Please choose a remark before saving.");
-      return;
+  try {
+    const response = await fetch("/api/executive/leads", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        leadId,
+        field,
+        value,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error();
     }
 
-    setSavingLeadId(leadId);
-    setStatusMessage(null);
-
-    try {
-      const response = await fetch("/api/executive/leads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ leadId, remark }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setStatusMessage(result?.message || "Failed to save remark.");
-        return;
-      }
-
-      setLeads((current) =>
-        current.map((lead) =>
-          lead.id === leadId
-            ? {
-                ...lead,
-                remark,
-                status: result.lead.status,
-                updatedAt: result.lead.updatedAt,
-              }
-            : lead
-        )
-      );
-
-      setStatusMessage("Remark updated successfully.");
-    } catch (error) {
-      setStatusMessage("Failed to save remark. Please try again.");
-    } finally {
-      setSavingLeadId(null);
-    }
+    setLeads((current) =>
+      current.map((lead) =>
+        lead.id === leadId
+          ? {
+              ...lead,
+              [field]: value,
+              updatedAt: new Date().toISOString(),
+            }
+          : lead
+      )
+    );
+  } catch {
+    setStatusMessage("Unable to save changes.");
   }
+}
 
   return (
     <div className="space-y-4">
@@ -147,12 +147,20 @@ export default function ExecutiveLeadActions({ initialLeads }: Props) {
                 <td className="px-4 py-4 text-slate-300">
                   <select
                     value={remarkSelection[lead.id] ?? ""}
-                    onChange={(event) =>
-                      setRemarkSelection((current) => ({
-                        ...current,
-                        [lead.id]: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => {
+  const value = event.target.value;
+
+  setRemarkSelection((current) => ({
+    ...current,
+    [lead.id]: value,
+  }));
+
+  updateLead(
+    lead.id,
+    "remark",
+    value
+  );
+}}
                     className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none"
                   >
                     {remarkOptions.map((option) => (
@@ -168,16 +176,10 @@ export default function ExecutiveLeadActions({ initialLeads }: Props) {
                   ) : null}
                 </td>
                 <td className="px-4 py-4 text-slate-300">
-                  <button
-                    type="button"
-                    onClick={() => handleSave(lead.id)}
-                    disabled={savingLeadId === lead.id}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-blue-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    {savingLeadId === lead.id ? "Saving…" : "Save"}
-                  </button>
-                </td>
+  <span className="text-emerald-400 text-sm">
+    Auto Save Enabled
+  </span>
+</td>
               </tr>
             ))}
           </tbody>
@@ -247,14 +249,7 @@ export default function ExecutiveLeadActions({ initialLeads }: Props) {
                     Shared to admin
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleSave(lead.id)}
-                  disabled={savingLeadId === lead.id}
-                  className="w-full rounded-2xl bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {savingLeadId === lead.id ? "Saving…" : "Save Remark"}
-                </button>
+                
               </div>
             </div>
           </div>

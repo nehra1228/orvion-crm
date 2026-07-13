@@ -5,30 +5,29 @@ import bcrypt from "bcrypt";
 export async function GET() {
   try {
     const users = await prisma.user.findMany({
-      orderBy: {
-        createdAt: "desc",
+      where: {
+        role: "EXECUTIVE",
+        active: true,
       },
+
+      orderBy: {
+        username: "asc",
+      },
+
       select: {
         id: true,
         username: true,
-        email: true,
-        role: true,
-        active: true,
-        createdAt: true,
-        _count: {
-          select: {
-            leads: true,
-          },
-        },
       },
     });
 
     return NextResponse.json(users);
+
   } catch (error) {
+
     console.error(error);
 
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      { error: "Failed to fetch executives" },
       { status: 500 }
     );
   }

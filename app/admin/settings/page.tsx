@@ -1,219 +1,76 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import {
+  Info, Bell, Building2, Check, ChevronRight, CloudDownload, Copy,
+  Database, Download, Eye, EyeOff, FileKey2, Globe2, KeyRound,
+  LockKeyhole, Mail, Monitor, Moon, Paintbrush, Plus,
+  RefreshCcw, RotateCcw, Save, ShieldCheck, Smartphone, Sun, Upload, UserCog,
+  UsersRound, X,
+} from "lucide-react";
+
+type Tab = "Company" | "Branding" | "Users" | "Security" | "Notifications" | "Backup" | "API" | "About";
+type User = { id: number; username: string; role: string; status: "Active" | "Inactive"; created: string };
+
+const tabs: { label: Tab; icon: typeof Building2 }[] = [
+  { label: "Company", icon: Building2 }, { label: "Branding", icon: Paintbrush }, { label: "Users", icon: UsersRound }, { label: "Security", icon: ShieldCheck },
+  { label: "Notifications", icon: Bell }, { label: "Backup", icon: Database }, { label: "API", icon: FileKey2 }, { label: "About", icon: Info },
+];
+const initialUsers: User[] = [
+  { id: 1, username: "Administrator", role: "Admin", status: "Active", created: "—" },
+];
+
+function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <section className={`rounded-2xl border border-white/[0.08] bg-slate-900/70 shadow-xl shadow-black/10 backdrop-blur-xl ${className}`}>{children}</section>;
+}
+function Label({ children }: { children: ReactNode }) { return <label className="mb-1.5 block text-xs font-medium text-slate-300">{children}</label>; }
+function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) { return <input {...props} className={`w-full rounded-xl border border-white/10 bg-slate-950/50 px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/10 ${className}`} />; }
+function Toggle({ enabled, onChange, label, detail, icon }: { enabled: boolean; onChange: () => void; label: string; detail: string; icon?: ReactNode }) {
+  return <div className="flex items-center gap-3 py-3"><div className="rounded-xl bg-white/[0.05] p-2 text-violet-300">{icon ?? <Bell className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><p className="text-sm font-medium text-slate-100">{label}</p><p className="text-xs text-slate-400">{detail}</p></div><button onClick={onChange} type="button" aria-label={`Toggle ${label}`} className={`relative h-6 w-11 rounded-full transition ${enabled ? "bg-violet-600" : "bg-slate-700"}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${enabled ? "left-6" : "left-1"}`} /></button></div>;
+}
+function SaveButton({ onClick, label = "Save Changes" }: { onClick: () => void; label?: string }) { return <button onClick={onClick} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-950/40 transition hover:bg-violet-500"><Save className="h-4 w-4" />{label}</button>; }
 
 export default function SettingsPage() {
-  const [fileName, setFileName] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [accountUsername, setAccountUsername] = useState("");
-  const [accountPassword, setAccountPassword] = useState("");
-  const [accountStatus, setAccountStatus] = useState<string | null>(null);
-  const [accountSaving, setAccountSaving] = useState(false);
-  const [deleteStatus, setDeleteStatus] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [tab, setTab] = useState<Tab>("Company");
+  const [notice, setNotice] = useState("");
+  const [logo, setLogo] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userDraft, setUserDraft] = useState({ username: "", role: "Executive" });
+  const [settings, setSettings] = useState({
+    companyName: "ORVION GROUP", email: "", phone: "", website: "", address: "", gst: "", color: "#7c3aed", darkMode: true,
+    timeout: "30", twoFactor: false, emailNotifications: true, whatsappNotifications: false, desktopNotifications: true, leadAlerts: true, webhook: "",
+  });
+  const [apiKey, setApiKey] = useState("");
 
   useEffect(() => {
-    async function loadLogo() {
-      const response = await fetch("/api/admin/logo");
-      const data = await response.json();
-      setLogoUrl(data.logoUrl ?? null);
-    }
-    loadLogo();
-
-    async function loadAccount() {
-      try {
-        const res = await fetch("/api/admin/account");
-        if (res.ok) {
-          const data = await res.json();
-          setAccountUsername(data.username || "");
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-    loadAccount();
+    const saved = window.localStorage.getItem("orvion-settings");
+    if (saved) { try { setSettings((current) => ({ ...current, ...JSON.parse(saved) })); } catch { /* ignore malformed local preference */ } }
   }, []);
+  const update = (key: keyof typeof settings, value: string | boolean) => setSettings((current) => ({ ...current, [key]: value }));
+  const save = () => { window.localStorage.setItem("orvion-settings", JSON.stringify(settings)); setNotice("Settings saved successfully"); window.setTimeout(() => setNotice(""), 2600); };
+  const copy = async (value: string, message = "Copied to clipboard") => { await navigator.clipboard?.writeText(value); setNotice(message); window.setTimeout(() => setNotice(""), 2200); };
+  const generateKey = () => { const key = `orv_live_${crypto.randomUUID().replace(/-/g, "")}`; setApiKey(key); setNotice("New API key generated"); };
+  const addUser = () => { if (!userDraft.username.trim()) return; setUsers((current) => [...current, { id: Date.now(), username: userDraft.username.trim(), role: userDraft.role, status: "Active", created: new Date().toLocaleDateString() }]); setUserDraft({ username: "", role: "Executive" }); setShowUserModal(false); setNotice("User added successfully"); };
+  const deactivate = (id: number) => setUsers((current) => current.map((user) => user.id === id ? { ...user, status: user.status === "Active" ? "Inactive" : "Active" } : user));
+  const downloadBackup = () => { const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), settings }, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "orvion-settings-backup.json"; link.click(); URL.revokeObjectURL(url); };
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const company = <div className="grid gap-5 lg:grid-cols-2"><Card className="lg:col-span-2 p-5"><SectionTitle icon={<Building2 />} title="Company Profile" subtitle="Keep your organization information current." /><div className="mt-6 grid gap-4 md:grid-cols-2"><Field label="Company Name"><Input value={settings.companyName} onChange={(e) => update("companyName", e.target.value)} /></Field><Field label="Company Email"><Input type="email" placeholder="company@example.com" value={settings.email} onChange={(e) => update("email", e.target.value)} /></Field><Field label="Phone"><Input placeholder="+91" value={settings.phone} onChange={(e) => update("phone", e.target.value)} /></Field><Field label="Website"><Input placeholder="https://" value={settings.website} onChange={(e) => update("website", e.target.value)} /></Field><Field label="GST Number"><Input placeholder="GSTIN" value={settings.gst} onChange={(e) => update("gst", e.target.value)} /></Field><Field label="Address"><Input placeholder="Business address" value={settings.address} onChange={(e) => update("address", e.target.value)} /></Field></div><div className="mt-6 flex justify-end"><SaveButton onClick={save} /></div></Card></div>;
+  const branding = <div className="grid gap-5 lg:grid-cols-2"><Card className="p-5"><SectionTitle icon={<Paintbrush />} title="Brand Identity" subtitle="Personalize your CRM experience." /><div className="mt-6"><Label>Company Logo</Label><label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.025] transition hover:border-violet-400/50 hover:bg-violet-500/[0.04]">{logo ? <img src={logo} alt="Company logo" className="h-16 max-w-40 object-contain" /> : <><Upload className="h-6 w-6 text-violet-300" /><span className="mt-2 text-sm font-medium">Upload logo</span><span className="mt-1 text-xs text-slate-500">PNG, JPG, or SVG</span></>}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) setLogo(URL.createObjectURL(file)); }} /></label></div><div className="mt-5"><Label>Company Color</Label><div className="flex gap-3"><input aria-label="Company color" type="color" value={settings.color} onChange={(e) => update("color", e.target.value)} className="h-11 w-14 cursor-pointer rounded-xl border border-white/10 bg-transparent p-1" /><Input value={settings.color} onChange={(e) => update("color", e.target.value)} /></div></div><div className="mt-6 flex justify-end"><SaveButton onClick={save} label="Save Branding" /></div></Card><Card className="p-5"><SectionTitle icon={<Eye />} title="Theme Preview" subtitle="Preview your selected brand tone." /><div className="mt-6 grid grid-cols-2 gap-3"><button onClick={() => update("darkMode", true)} className={`rounded-2xl border p-4 text-left transition ${settings.darkMode ? "border-violet-400 bg-violet-500/10" : "border-white/10 bg-slate-950"}`}><Moon className="h-5 w-5 text-violet-300" /><p className="mt-6 text-sm font-semibold">Dark Mode</p><p className="mt-1 text-xs text-slate-400">Current workspace theme</p></button><button onClick={() => update("darkMode", false)} className={`rounded-2xl border p-4 text-left transition ${!settings.darkMode ? "border-violet-400 bg-violet-500/10" : "border-white/10 bg-white/[0.03]"}`}><Sun className="h-5 w-5 text-amber-300" /><p className="mt-6 text-sm font-semibold">Light Mode</p><p className="mt-1 text-xs text-slate-400">Preview only</p></button></div><div className="mt-5 rounded-2xl border border-white/10 p-4" style={{ background: `linear-gradient(135deg, ${settings.color}22, transparent)` }}><div className="h-2 w-20 rounded-full" style={{ background: settings.color }} /><div className="mt-4 h-2 w-full rounded-full bg-white/10" /><div className="mt-2 h-2 w-2/3 rounded-full bg-white/10" /></div></Card></div>;
+  const usersTab = <Card className="overflow-hidden"><div className="flex flex-col gap-3 border-b border-white/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between"><div><SectionTitle icon={<UsersRound />} title="User Management" subtitle="Manage account access and roles." /></div><button onClick={() => setShowUserModal(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold hover:bg-violet-500"><Plus className="h-4 w-4" />Add User</button></div><div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-sm"><thead className="bg-white/[0.025] text-[11px] uppercase tracking-wider text-slate-400"><tr>{["Username", "Role", "Status", "Created Date", "Actions"].map((x) => <th className="px-5 py-3 font-medium" key={x}>{x}</th>)}</tr></thead><tbody>{users.map((user) => <tr className="border-t border-white/[0.06] hover:bg-white/[0.025]" key={user.id}><td className="px-5 py-4 font-medium">{user.username}</td><td className="px-5 py-4 text-slate-300">{user.role}</td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${user.status === "Active" ? "bg-emerald-500/15 text-emerald-300" : "bg-slate-700 text-slate-300"}`}>{user.status}</span></td><td className="px-5 py-4 text-slate-400">{user.created}</td><td className="px-5 py-4"><div className="flex gap-2"><button onClick={() => copy(`Password reset requested for ${user.username}`, "Password reset request copied")} className="rounded-lg bg-white/[0.05] px-2.5 py-1.5 text-xs hover:bg-white/10">Reset Password</button><button onClick={() => deactivate(user.id)} className="rounded-lg bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-300 hover:bg-rose-500/20">{user.status === "Active" ? "Deactivate" : "Activate"}</button></div></td></tr>)}</tbody></table></div></Card>;
+  const security = <div className="grid gap-5 lg:grid-cols-2"><Card className="p-5"><SectionTitle icon={<KeyRound />} title="Change Password" subtitle="Use a strong, unique password." /><div className="mt-6 space-y-4"><Field label="Current Password"><PasswordInput visible={showPassword} onToggle={() => setShowPassword(!showPassword)} /></Field><Field label="New Password"><PasswordInput visible={showPassword} onToggle={() => setShowPassword(!showPassword)} /></Field><Field label="Confirm New Password"><PasswordInput visible={showPassword} onToggle={() => setShowPassword(!showPassword)} /></Field></div><div className="mt-6 flex justify-end"><SaveButton onClick={() => setNotice("Password change request saved")} label="Update Password" /></div></Card><div className="space-y-5"><Card className="p-5"><SectionTitle icon={<LockKeyhole />} title="Access Controls" subtitle="Protect access to your workspace." /><div className="mt-4 divide-y divide-white/[0.06]"><div className="py-3"><Label>Session Timeout</Label><select value={settings.timeout} onChange={(e) => update("timeout", e.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-slate-200 outline-none"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="240">4 hours</option></select></div><Toggle enabled={settings.twoFactor} onChange={() => update("twoFactor", !settings.twoFactor)} label="Two Factor Authentication" detail="Require an additional verification step." icon={<ShieldCheck className="h-4 w-4" />} /></div></Card><Card className="p-5"><SectionTitle icon={<RefreshCcw />} title="Login History" subtitle="Recent sign-in activity." /><div className="mt-4 rounded-xl border border-dashed border-white/10 p-6 text-center"><Monitor className="mx-auto h-5 w-5 text-slate-500" /><p className="mt-2 text-sm font-medium text-slate-300">No login history available</p><p className="mt-1 text-xs text-slate-500">Sign-in activity will appear here when supplied by your server.</p></div></Card></div></div>;
+  const notifications = <Card className="p-5"><SectionTitle icon={<Bell />} title="Notification Preferences" subtitle="Control how and when your team receives updates." /><div className="mt-5 divide-y divide-white/[0.06]"><Toggle enabled={settings.emailNotifications} onChange={() => update("emailNotifications", !settings.emailNotifications)} label="Email Notifications" detail="Receive operational updates by email." icon={<Mail className="h-4 w-4" />} /><Toggle enabled={settings.whatsappNotifications} onChange={() => update("whatsappNotifications", !settings.whatsappNotifications)} label="WhatsApp Notifications" detail="Receive selected alerts on WhatsApp." icon={<Smartphone className="h-4 w-4" />} /><Toggle enabled={settings.desktopNotifications} onChange={() => update("desktopNotifications", !settings.desktopNotifications)} label="Desktop Notifications" detail="Show browser notifications while signed in." icon={<Monitor className="h-4 w-4" />} /><Toggle enabled={settings.leadAlerts} onChange={() => update("leadAlerts", !settings.leadAlerts)} label="Lead Alerts" detail="Notify the team about new lead assignments." icon={<Bell className="h-4 w-4" />} /></div><div className="mt-6 flex justify-end"><SaveButton onClick={save} label="Save Preferences" /></div></Card>;
+  const backup = <div className="grid gap-5 lg:grid-cols-2"><Card className="p-5"><SectionTitle icon={<Database />} title="Database Backup" subtitle="Export a local snapshot of available settings." /><div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"><p className="text-xs uppercase tracking-wide text-slate-500">Last Backup</p><p className="mt-1 text-sm font-semibold">No local backup created</p><p className="mt-1 text-xs text-slate-400">Backups use the data accessible in this browser.</p></div><div className="mt-5 flex flex-wrap gap-2"><button onClick={downloadBackup} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold hover:bg-violet-500"><Download className="h-4 w-4" />Download Backup</button><button onClick={() => setNotice("Automatic backup schedule is managed by your server")} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm hover:bg-white/[0.05]"><RefreshCcw className="h-4 w-4" />Create Backup</button></div></Card><Card className="p-5"><SectionTitle icon={<RotateCcw />} title="Restore Backup" subtitle="Restore settings from a local backup file." /><label className="mt-6 flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 text-center hover:border-violet-400/50"><CloudDownload className="h-6 w-6 text-violet-300" /><p className="mt-2 text-sm font-medium">Upload backup file</p><p className="mt-1 text-xs text-slate-500">JSON settings backup</p><input type="file" accept="application/json" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = () => { try { update("companyName", JSON.parse(String(reader.result)).settings?.companyName ?? settings.companyName); setNotice("Backup settings restored"); } catch { setNotice("This backup file could not be read"); } }; reader.readAsText(file); } }} /></label></Card></div>;
+  const api = <div className="grid gap-5 lg:grid-cols-2"><Card className="p-5"><SectionTitle icon={<FileKey2 />} title="API Keys" subtitle="Use keys to connect approved integrations." /><div className="mt-6"><Label>Active API Key</Label><div className="flex gap-2"><Input readOnly value={apiKey ? `${apiKey.slice(0, 16)}${"•".repeat(18)}` : "No API key generated"} /><button onClick={() => apiKey && copy(apiKey)} disabled={!apiKey} className="rounded-xl border border-white/10 px-3 text-slate-300 transition hover:bg-white/[0.06] disabled:opacity-40"><Copy className="h-4 w-4" /></button></div></div><button onClick={generateKey} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold hover:bg-violet-500"><KeyRound className="h-4 w-4" />Generate New Key</button></Card><Card className="p-5"><SectionTitle icon={<Globe2 />} title="Webhooks" subtitle="Send selected events to your integration endpoint." /><div className="mt-6"><Label>Webhook URL</Label><Input placeholder="https://your-domain.com/webhooks/orvion" value={settings.webhook} onChange={(e) => update("webhook", e.target.value)} /></div><div className="mt-6 flex justify-end"><SaveButton onClick={save} label="Save Webhook" /></div></Card></div>;
+  const about = <Card className="p-5"><SectionTitle icon={<Info />} title="About ORVION CRM" subtitle="Workspace and product information." /><div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><AboutItem label="Version" value="CRM 1.0" /><AboutItem label="Build Number" value="—" /><AboutItem label="Developer" value="ORVION GROUP" /><AboutItem label="License" value="Enterprise" /></div><div className="mt-6 rounded-xl border border-violet-500/15 bg-violet-500/[0.06] p-4 text-sm text-slate-300">For product support or licensing enquiries, contact your ORVION administrator.</div></Card>;
+  const content: Record<Tab, ReactNode> = { Company: company, Branding: branding, Users: usersTab, Security: security, Notifications: notifications, Backup: backup, API: api, About: about };
 
-    const form = event.currentTarget;
-    const fileInput = form.elements.namedItem("logo") as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-
-    if (!file) {
-      setStatus("Please choose a logo file.");
-      return;
-    }
-
-    setLoading(true);
-    setStatus(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("logo", file);
-
-      const response = await fetch("/api/admin/logo", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setStatus(result?.message || "Logo upload failed.");
-      } else {
-        setStatus("Logo updated successfully.");
-        setFileName("");
-        fileInput.value = "";
-        setLogoUrl(result.logoUrl || null);
-      }
-    } catch (error) {
-      setStatus("Logo upload failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    setFileName(file?.name ?? "");
-    setStatus(null);
-  }
-
-  return (
-    <DashboardLayout>
-      <div className="space-y-8">
-        <div className="space-y-3">
-          <p className="text-sm uppercase tracking-[0.3em] text-blue-400">Settings</p>
-          <h1 className="text-4xl font-bold text-white">Company Branding</h1>
-          <p className="text-slate-400 max-w-2xl">
-            Upload a company logo to show across the CRM interface.
-          </p>
-        </div>
-
-        <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-8">
-          <form onSubmit={handleSubmit} className="grid gap-6 max-w-xl">
-            {logoUrl && (
-              <div className="rounded-3xl border border-slate-800 bg-slate-950 p-4">
-                <p className="text-sm font-medium text-slate-300">Current logo</p>
-                <img src={logoUrl} alt="Company logo" className="mt-3 max-h-24 object-contain" />
-              </div>
-            )}
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-300" htmlFor="logo">
-                Upload logo
-              </label>
-              <input
-                id="logo"
-                name="logo"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-              />
-              {fileName && <p className="mt-2 text-sm text-slate-400">Selected file: {fileName}</p>}
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Uploading…" : "Upload Logo"}
-            </button>
-
-            {status && <p className="text-sm text-slate-300">{status}</p>}
-          </form>
-        </section>
-
-        <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-8">
-          <h2 className="text-2xl font-semibold text-white">Danger Zone</h2>
-          <p className="text-slate-400">Delete all leads from the database. This action cannot be undone.</p>
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={async () => {
-                if (!window.confirm("Are you sure you want to delete all leads? This cannot be undone.")) return;
-                setDeleting(true);
-                setDeleteStatus(null);
-
-                try {
-                  const res = await fetch("/api/admin/leads", { method: "DELETE" });
-                  const json = await res.json();
-                  if (!res.ok) {
-                    setDeleteStatus(json?.message || "Failed to delete leads.");
-                  } else {
-                    setDeleteStatus(`Deleted ${json.deleted} leads.`);
-                  }
-                } catch (err) {
-                  setDeleteStatus("Failed to delete leads.");
-                } finally {
-                  setDeleting(false);
-                }
-              }}
-              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {deleting ? "Deleting…" : "Delete all leads"}
-            </button>
-            {deleteStatus && <p className="text-sm text-slate-300">{deleteStatus}</p>}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-8">
-          <h2 className="text-2xl font-semibold text-white">Admin Account</h2>
-          <p className="text-slate-400">Change the admin username or password for the currently logged-in account.</p>
-
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setAccountSaving(true);
-              setAccountStatus(null);
-
-              try {
-                const res = await fetch("/api/admin/account", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ username: accountUsername, password: accountPassword }),
-                });
-
-                const json = await res.json();
-                if (!res.ok) {
-                  setAccountStatus(json?.message || "Failed to update account.");
-                } else {
-                  setAccountStatus("Account updated successfully.");
-                  setAccountPassword("");
-                }
-              } catch (err) {
-                setAccountStatus("Failed to update account.");
-              } finally {
-                setAccountSaving(false);
-              }
-            }}
-            className="mt-6 grid gap-4 max-w-xl"
-          >
-            <div>
-              <label className="block text-sm font-medium text-slate-300">Username</label>
-              <input value={accountUsername} onChange={(e) => setAccountUsername(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300">New Password</label>
-              <input type="password" value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
-            </div>
-
-            <button type="submit" disabled={accountSaving} className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">
-              {accountSaving ? "Saving…" : "Save Account"}
-            </button>
-
-            {accountStatus && <p className="text-sm text-slate-300">{accountStatus}</p>}
-          </form>
-        </section>
-      </div>
-    </DashboardLayout>
-  );
+  return <DashboardLayout><main className="min-h-screen bg-[#07111f] px-4 py-5 text-slate-100 sm:px-6 lg:px-8"><div className="mx-auto max-w-[1500px]"><header className="mb-6"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Workspace administration</p><h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Settings</h1><p className="mt-1 text-sm text-slate-400">Manage your organization, branding, users and system configuration.</p></header><div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]"><aside className="rounded-2xl border border-white/[0.08] bg-slate-900/70 p-2 shadow-xl shadow-black/10 backdrop-blur-xl lg:h-fit">{tabs.map(({ label, icon: Icon }) => <button key={label} onClick={() => setTab(label)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${tab === label ? "bg-violet-500/15 font-semibold text-violet-200" : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-100"}`}><Icon className="h-4 w-4" />{label}<ChevronRight className={`ml-auto h-3.5 w-3.5 transition ${tab === label ? "opacity-100" : "opacity-0"}`} /></button>)}</aside><div className="min-w-0">{content[tab]}</div></div></div>{notice && <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-slate-900 px-4 py-3 text-sm font-medium shadow-2xl"><Check className="h-4 w-4 text-emerald-400" />{notice}</div>}{showUserModal && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm"><Card className="w-full max-w-md p-5"><div className="flex items-center justify-between"><h2 className="font-semibold">Add User</h2><button onClick={() => setShowUserModal(false)}><X className="h-5 w-5 text-slate-400" /></button></div><div className="mt-5 space-y-4"><Field label="Username"><Input autoFocus value={userDraft.username} onChange={(e) => setUserDraft({ ...userDraft, username: e.target.value })} /></Field><Field label="Role"><select value={userDraft.role} onChange={(e) => setUserDraft({ ...userDraft, role: e.target.value })} className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm outline-none"><option>Executive</option><option>Admin</option></select></Field></div><div className="mt-6 flex justify-end gap-2"><button onClick={() => setShowUserModal(false)} className="rounded-xl px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.05]">Cancel</button><button onClick={addUser} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold hover:bg-violet-500">Add User</button></div></Card></div>}</main></DashboardLayout>;
 }
+
+function Field({ label, children }: { label: string; children: ReactNode }) { return <div><Label>{label}</Label>{children}</div>; }
+function SectionTitle({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }) { return <div className="flex gap-3"><span className="rounded-xl bg-violet-500/10 p-2 text-violet-300">{icon}</span><div><h2 className="text-base font-semibold">{title}</h2><p className="mt-0.5 text-xs text-slate-400">{subtitle}</p></div></div>; }
+function PasswordInput({ visible, onToggle }: { visible: boolean; onToggle: () => void }) { return <div className="relative"><Input type={visible ? "text" : "password"} autoComplete="new-password" /><button type="button" onClick={onToggle} className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-200">{visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>; }
+function AboutItem({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-4"><p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 text-sm font-semibold text-slate-100">{value}</p></div>; }

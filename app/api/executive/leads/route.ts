@@ -61,3 +61,89 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ lead: updatedLead });
 }
+export async function PATCH(request: Request) {
+  const user = await getCurrentUser();
+
+  if (!user || user.role !== "EXECUTIVE") {
+    return NextResponse.json(
+      { message: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+
+    const leadId = body.leadId;
+
+    const lead = await prisma.lead.findUnique({
+      where: {
+        id: leadId,
+      },
+    });
+
+    if (!lead || lead.assignedToId !== user.id) {
+      return NextResponse.json(
+        { message: "Lead not found." },
+        { status: 404 }
+      );
+    }
+
+    const updateData: any = {};
+
+    if (body.status) {
+      updateData.status = body.status;
+    }
+
+    if (body.remark !== undefined) {
+      updateData.remark = body.remark || null;
+    }
+
+    if (body.notes !== undefined) {
+      updateData.notes = body.notes || null;
+    }
+
+    if (body.followUpDate !== undefined) {
+      updateData.followUpDate = body.followUpDate
+        ? new Date(body.followUpDate)
+        : null;
+    }
+
+    const updatedLead = await prisma.lead.update({
+      where: {
+        id: leadId,
+      },
+      data: updateData,
+    });
+
+    await prisma.activity.create({
+      data: {
+        leadId,
+        userId: user.id,
+        oldStatus: lead.status,
+        newStatus: updatedLead.status,
+        remark: updatedLead.remark,
+        note: "Lead updated from Calling Module",
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      lead: updatedLead,
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Update failed",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}

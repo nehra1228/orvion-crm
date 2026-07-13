@@ -1,7 +1,8 @@
-import DashboardLayout from "../../components/dashboard/DashboardLayout";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import LeadTable from "../../components/leads/LeadTable";
 import Link from "next/link";
 import { Plus, Upload, Download } from "lucide-react";
+import UploadExcel from "../../components/upload/UploadExcel";
 
 export default function LeadsPage() {
   return (
@@ -49,7 +50,9 @@ export default function LeadsPage() {
 
         </div>
 
-        <LeadTable />
+        <UploadExcel />
+
+<LeadTable />
 
       </div>
     </DashboardLayout>
