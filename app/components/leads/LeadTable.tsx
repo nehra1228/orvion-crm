@@ -32,6 +32,10 @@ interface Lead {
 interface Executive {
   id: string;
   username: string;
+  role?: string;
+  companyId?: string | null;
+  departmentId?: string | null;
+  teamId?: string | null;
 }
 
 const statusColor: Record<string, string> = {
@@ -56,8 +60,10 @@ export default function LeadTable() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
 
   const [executives, setExecutives] = useState<Executive[]>([]);
+  const [teamLeaders, setTeamLeaders] = useState<Executive[]>([]);
 
   const [selectedExecutive, setSelectedExecutive] = useState("");
+  const [selectedTeamLeader, setSelectedTeamLeader] = useState("");
 
   async function fetchLeads() {
     try {
@@ -85,15 +91,20 @@ const data = JSON.parse(text);
 
   async function fetchExecutives() {
     try {
+      const [executiveRes, teamLeaderRes] = await Promise.all([
+        fetch("/api/users?role=EXECUTIVE"),
+        fetch("/api/users?role=TEAM_LEADER"),
+      ]);
 
-      const res = await fetch("/api/users");
+      if (executiveRes.ok) {
+        const data = await executiveRes.json();
+        setExecutives(data);
+      }
 
-      if (!res.ok) return;
-
-      const data = await res.json();
-
-      setExecutives(data);
-
+      if (teamLeaderRes.ok) {
+        const data = await teamLeaderRes.json();
+        setTeamLeaders(data);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -213,21 +224,15 @@ const data = JSON.parse(text);
     if (selectedLeads.length === 0) return;
 
     await fetch("/api/leads/bulk-assign", {
-
       method: "PATCH",
-
       headers: {
         "Content-Type": "application/json",
       },
-
       body: JSON.stringify({
-
         executiveId: selectedExecutive,
-
+        teamId: selectedTeamLeader || undefined,
         leadIds: selectedLeads,
-
       }),
-
     });
 
     setSelectedLeads([]);
@@ -306,37 +311,31 @@ const data = JSON.parse(text);
           <div className="flex flex-wrap items-center gap-3">
 
             <div className="relative">
-
               <select
-                value={selectedExecutive}
-                onChange={(e) =>
-                  setSelectedExecutive(e.target.value)
-                }
+                value={selectedTeamLeader}
+                onChange={(e) => setSelectedTeamLeader(e.target.value)}
                 className="rounded-lg border border-white/10 bg-[#0C101D] py-2 pl-4 pr-10 text-white outline-none"
               >
-
-                <option value="">
-                  Assign Executive
-                </option>
-
-                {executives.map((executive) => (
-
-                  <option
-                    key={executive.id}
-                    value={executive.id}
-                  >
-                    {executive.username}
-                  </option>
-
+                <option value="">Assign Team Leader</option>
+                {teamLeaders.map((leader) => (
+                  <option key={leader.id} value={leader.id}>{leader.username}</option>
                 ))}
-
               </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
 
-              <ChevronDown
-                size={16}
-                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
+            <div className="relative">
+              <select
+                value={selectedExecutive}
+                onChange={(e) => setSelectedExecutive(e.target.value)}
+                className="rounded-lg border border-white/10 bg-[#0C101D] py-2 pl-4 pr-10 text-white outline-none"
+              >
+                <option value="">Assign Executive</option>
+                {executives.map((executive) => (
+                  <option key={executive.id} value={executive.id}>{executive.username}</option>
+                ))}
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
             </div>
 
             <button

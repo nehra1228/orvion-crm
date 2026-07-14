@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get("role") || "EXECUTIVE";
+
     const users = await prisma.user.findMany({
       where: {
-        role: "EXECUTIVE",
+        role: role as any,
         active: true,
       },
 
@@ -17,6 +20,17 @@ export async function GET() {
       select: {
         id: true,
         username: true,
+        role: true,
+        companyId: true,
+        departmentId: true,
+        teamId: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            businessType: true,
+          },
+        },
       },
     });
 

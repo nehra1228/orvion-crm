@@ -36,7 +36,7 @@ const [newPassword, setNewPassword] = useState("");
 
   async function fetchExecutives() {
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users", { credentials: "include" });
 
       if (!res.ok) {
         throw new Error("Failed to fetch executives");
@@ -531,45 +531,19 @@ const [newPassword, setNewPassword] = useState("");
           Cancel
         </button>
 
-        <button
-          onClick={async () => {
-
-            const res = await fetch("/api/admin/users", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                username: newUsername,
-                email: newEmail,
-                password: newPassword,
-                role: "EXECUTIVE",
-              }),
-            });
-
-            if (res.ok) {
-
-              setShowModal(false);
-
-              setNewUsername("");
-
-              setNewEmail("");
-
-              setNewPassword("");
-
-              fetchExecutives();
-
-            } else {
-
-              alert("Unable to create executive.");
-
-            }
-
+        {/** Create executive: use credentials, show server error, disable while submitting */}
+        <CreateExecutiveButton
+          newUsername={newUsername}
+          newEmail={newEmail}
+          newPassword={newPassword}
+          onSuccess={() => {
+            setShowModal(false);
+            setNewUsername("");
+            setNewEmail("");
+            setNewPassword("");
+            fetchExecutives();
           }}
-          className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950"
-        >
-          Create Executive
-        </button>
+        />
 
       </div>
 
@@ -579,5 +553,56 @@ const [newPassword, setNewPassword] = useState("");
 )}
       </div>
     </DashboardLayout>
+  );
+}
+
+function CreateExecutiveButton({ newUsername, newEmail, newPassword, onSuccess }: { newUsername: string; newEmail: string; newPassword: string; onSuccess: () => void }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="flex items-center gap-3">
+      {error && <p className="mr-2 text-sm text-rose-300">{error}</p>}
+      <button
+        onClick={async () => {
+          if (!newUsername || !newPassword) {
+            setError("Username and password are required.");
+            return;
+          }
+          setSubmitting(true);
+          setError(null);
+          try {
+            const res = await fetch("/api/admin/users", {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username: newUsername, email: newEmail, password: newPassword, role: "EXECUTIVE" }),
+            });
+
+            let body: any = null;
+            try { body = await res.json(); } catch (e) { /* ignore */ }
+
+            if (!res.ok) {
+              const msg = body?.message || body?.error || `Failed to create user (status ${res.status})`;
+              setError(msg);
+              setSubmitting(false);
+              return;
+            }
+
+            onSuccess();
+          } catch (err: any) {
+            setError(err?.message || "Network error: could not create user.");
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+        disabled={submitting}
+        className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50"
+      >
+        {submitting ? "Creating…" : "Create Executive"}
+      </button>
+    </div>
   );
 }

@@ -14,7 +14,7 @@ export default function UploadLeadsPage() {
   const [doNotAutoAssign, setDoNotAutoAssign] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/users")
+    fetch("/api/admin/users", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
         const execs = (data || []).filter((u: any) => u.role === "EXECUTIVE").map((u: any) => ({ id: u.id, username: u.username }));
@@ -47,6 +47,7 @@ export default function UploadLeadsPage() {
 
       const response = await fetch("/api/admin/upload", {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
 

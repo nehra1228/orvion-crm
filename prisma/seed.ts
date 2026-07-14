@@ -13,14 +13,14 @@ async function seedAdmin() {
     },
     update: {
       password: hashedPassword,
-      role: Role.ADMIN,
+      role: Role.SUPER_ADMIN,
       active: true,
     },
     create: {
       username: "Nehra",
       email: "admin@orvion.com",
       password: hashedPassword,
-      role: Role.ADMIN,
+      role: Role.SUPER_ADMIN,
       active: true,
     },
   });
@@ -52,11 +52,36 @@ async function seedExecutive() {
   console.log("✅ Executive Ready");
 }
 
+async function seedHR() {
+  const hashedPassword = await bcrypt.hash("Meera@1228", 10);
+
+  await prisma.user.upsert({
+    where: {
+      username: "Meera",
+    },
+    update: {
+      password: hashedPassword,
+      role: Role.HR,
+      active: true,
+    },
+    create: {
+      username: "Meera",
+      email: "meera@example.com",
+      password: hashedPassword,
+      role: Role.HR,
+      active: true,
+    },
+  });
+
+  console.log("✅ HR Ready");
+}
+
 async function main() {
   console.log("🌱 Seeding ORVION CRM...");
 
   await seedAdmin();
   await seedExecutive();
+  await seedHR();
 
   console.log("🎉 Database seeded successfully!");
 }

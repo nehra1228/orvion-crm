@@ -36,7 +36,8 @@ export default function Navbar({ title, subtitle }: NavbarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [username, setUsername] = useState("Administrator");
-  const pathSegments = pathname.split("/").filter(Boolean);
+  const [userRole, setUserRole] = useState<string>("");
+  const pathSegments = pathname?.split("/").filter(Boolean) ?? [];
   const segment = pathSegments[pathSegments.length - 1] ?? "dashboard";
   const detail = pageDetails[segment] ?? { title: segment.replace(/[-_]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()), subtitle: "ORVION CRM workspace" };
 
@@ -46,11 +47,35 @@ export default function Navbar({ title, subtitle }: NavbarProps) {
     const savedTheme = window.localStorage.getItem("orvion-theme") as "dark" | "light" | null;
     if (savedTheme) setTheme(savedTheme);
     const keydown = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") { setSearchOpen(false); setNotificationsOpen(false); setProfileOpen(false); } };
-    window.addEventListener("keydown", keydown); return () => window.removeEventListener("keydown", keydown);
+    window.addEventListener("keydown", keydown);
+
+    (async () => {
+      const res = await fetch("/api/users/me");
+      if (!res.ok) return;
+      const data = await res.json();
+      setUserRole(data.user?.role || "");
+    })();
+
+    return () => window.removeEventListener("keydown", keydown);
   }, []);
   const setAppTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); window.localStorage.setItem("orvion-theme", next); document.documentElement.classList.toggle("dark", next === "dark"); };
   const go = (href: string) => { setSearchOpen(false); setProfileOpen(false); router.push(href); };
-  const logout = () => { window.localStorage.removeItem("orvion-login-username"); router.push("/login"); };
+  const logout = async () => {
+    if (userRole === "EXECUTIVE") {
+      try {
+        await fetch("/api/executive/presence", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          keepalive: true,
+          body: JSON.stringify({ status: "OFFLINE" }),
+        });
+      } catch {
+        // logout should still proceed even if presence update fails
+      }
+    }
+    window.localStorage.removeItem("orvion-login-username");
+    router.push("/login");
+  };
   const iconButton = "relative flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.035] text-slate-400 transition hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-cyan-300/[0.08] hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-300/45";
 
   return <header className="sticky top-0 z-40 px-4 pb-3 pt-4 sm:px-5 lg:px-6"><motion.div initial={{ opacity: 0, y: reducedMotion ? 0 : -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} className="relative flex min-h-[64px] items-center gap-3 rounded-2xl border border-white/[0.08] bg-slate-950/60 px-3 shadow-[0_12px_45px_rgba(0,0,0,.16)] backdrop-blur-xl sm:px-4"><div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/35 to-transparent" />

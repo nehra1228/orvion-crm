@@ -35,33 +35,48 @@ export async function getCurrentUser() {
       username: user.username,
       role: user.role,
       active: user.active,
+      companyId: user.companyId,
+      departmentId: user.departmentId,
+      teamId: user.teamId,
     };
   } catch {
     return null;
   }
 }
 
-export async function requireUser(role: "SUPER_ADMIN" | "EXECUTIVE") {
+export async function requireUser(role: "ADMIN" | "EXECUTIVE") {
   const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  if (user.role === role) {
-    return user;
+  const isExecutive = user.role === "EXECUTIVE";
+  const isAdminRole =
+    user.role === "ADMIN" ||
+    user.role === "SUPER_ADMIN" ||
+    user.role === "COMPANY_ADMIN" ||
+    user.role === "HR";
+
+  if (role === "EXECUTIVE") {
+    if (isExecutive) {
+      return user;
+    }
+    if (isAdminRole) {
+      redirect("/admin/dashboard");
+    }
+    redirect("/login");
   }
 
-  // Redirect executives away from admin routes to their dashboard
-  if (role === "ADMIN" && user.role === "EXECUTIVE") {
-    redirect("/executive/dashboard");
+  if (role === "ADMIN") {
+    if (isAdminRole) {
+      return user;
+    }
+    if (isExecutive) {
+      redirect("/executive/dashboard");
+    }
+    redirect("/login");
   }
 
-  // Redirect admins away from executive routes to admin dashboard
-  if (role === "EXECUTIVE" && user.role === "ADMIN") {
-    redirect("/admin/dashboard");
-  }
-
-  // Fallback
   redirect("/login");
 }

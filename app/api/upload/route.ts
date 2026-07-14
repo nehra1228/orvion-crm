@@ -27,7 +27,25 @@ export async function POST(req: NextRequest) {
     const rows = XLSX.utils.sheet_to_json<any>(sheet);
 
     let imported = 0;
-let duplicates = 0;
+    let duplicates = 0;
+
+    const defaultCompany = await prisma.company.findFirst({
+      orderBy: { createdAt: "asc" },
+    });
+
+    const defaultDepartment = defaultCompany
+      ? await prisma.department.findFirst({
+          where: { companyId: defaultCompany.id },
+          orderBy: { createdAt: "asc" },
+        })
+      : null;
+
+    const defaultTeam = defaultDepartment
+      ? await prisma.team.findFirst({
+          where: { departmentId: defaultDepartment.id },
+          orderBy: { createdAt: "asc" },
+        })
+      : null;
 
     for (const row of rows) {
       if (!row.Name || !row.Mobile) continue;
@@ -39,6 +57,9 @@ let duplicates = 0;
           city: row.City ? String(row.City) : null,
           project: row.Project ? String(row.Project) : null,
           source: row.Source ? String(row.Source) : null,
+          companyId: defaultCompany?.id ?? null,
+          departmentId: defaultDepartment?.id ?? null,
+          teamId: defaultTeam?.id ?? null,
         },
       });
 
@@ -48,6 +69,10 @@ let duplicates = 0;
     return NextResponse.json({
       success: true,
       imported,
+      duplicates,
+      company: defaultCompany?.name || null,
+      department: defaultDepartment?.name || null,
+      team: defaultTeam?.name || null,
     });
 
   } catch (error) {

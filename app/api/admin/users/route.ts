@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
+import { sendAccountCredentialsEmail } from "@/lib/email";
 
 export async function GET() {
   const users = await prisma.user.findMany({
     orderBy: [{ role: "asc" }, { username: "asc" }],
+    include: {
+      company: { select: { id: true, name: true } },
+      department: { select: { id: true, name: true } },
+      team: { select: { id: true, name: true } },
+    },
   });
 
   return NextResponse.json(users);
@@ -12,10 +19,25 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { username, email, password, role } = body;
+  const { username, email, password, role, companyId, departmentId, teamId, fullName } = body;
+
+  const creator = await getCurrentUser();
+  if (!creator) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  // HR may create executives and teams but must not create admin-level users
+  const adminRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN"];
+  if (creator.role !== "HR" && !adminRoles.includes(creator.role) && creator.role !== "COMPANY_ADMIN") {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
 
   if (!username || !password || !role) {
     return NextResponse.json({ message: "Username, password and role are required." }, { status: 400 });
+  }
+
+  if (creator.role === "HR" && adminRoles.includes(role)) {
+    return NextResponse.json({ message: "HR cannot create admin-level users." }, { status: 403 });
   }
 
   const hashedPassword = await hashPassword(password);
@@ -28,9 +50,20 @@ export async function POST(request: Request) {
   };
 
   if (email) data.email = email;
+  if (fullName) data.fullName = fullName;
+  if (companyId) data.companyId = companyId;
+  if (departmentId) data.departmentId = departmentId;
+  if (teamId) data.teamId = teamId;
 
   try {
     const user = await prisma.user.create({ data });
+    if (email) {
+      try {
+        await sendAccountCredentialsEmail({ to: email, username, password });
+      } catch (sendError) {
+        console.error("Failed to send account credentials email:", sendError);
+      }
+    }
     return NextResponse.json(user);
   } catch (err: any) {
     console.error("Error creating user:", err);

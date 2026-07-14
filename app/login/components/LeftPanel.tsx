@@ -41,9 +41,9 @@ export default function LeftPanel() {
 
         <p className="mt-8 max-w-xl text-lg leading-9 text-slate-400">
 
-          AI Powered Enterprise CRM engineered for intelligent
-          lead management, automation, executive monitoring,
-          sales analytics and business growth.
+          Enterprise CRM engineered for intelligent lead management,
+          automation, executive monitoring, sales analytics
+          and business growth.
 
         </p>
 

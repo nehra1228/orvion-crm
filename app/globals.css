@@ -4,14 +4,20 @@
   color-scheme: dark;
   --bg: #05070f;
   --bg-alt: #090b15;
-  --surface: rgba(12, 16, 29, 0.96);
-  --surface-strong: rgba(18, 22, 41, 0.98);
+  --surface: rgba(12, 16, 29, 0.92);
+  --surface-strong: rgba(10, 14, 24, 0.98);
+  --surface-soft: rgba(12, 18, 33, 0.72);
   --surface-border: rgba(255, 255, 255, 0.08);
-  --accent: #d9b16e;
-  --accent-soft: #f3deab;
+  --surface-border-strong: rgba(255, 255, 255, 0.14);
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-strong: rgba(255, 255, 255, 0.09);
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.26);
+  --shadow-elevated: 0 28px 110px rgba(0, 0, 0, 0.36);
   --text: #f8f3e7;
-  --muted: #9fa5b9;
-  --shadow: 0 20px 100px rgba(0, 0, 0, 0.25);
+  --muted: #a3afc7;
+  --accent: #6ee7ff;
+  --accent-strong: #22d3ee;
+  --gradient: radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 24%), radial-gradient(circle at bottom right, rgba(34, 211, 238, 0.1), transparent 24%), linear-gradient(180deg, #020617 0%, #05080f 100%);
 }
 
 input:-webkit-autofill,
@@ -29,9 +35,7 @@ body {
   min-height: 100%;
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: radial-gradient(circle at top left, rgba(217, 177, 110, 0.08), transparent 35%),
-    radial-gradient(circle at bottom right, rgba(217, 177, 110, 0.05), transparent 30%),
-    linear-gradient(180deg, #020617 0%, #04070f 100%);
+  background: var(--gradient);
 }
 
 * {
@@ -43,25 +47,21 @@ body {
 }
 
 ::selection {
-  background: rgba(217, 177, 110, 0.25);
+  background: rgba(110, 231, 255, 0.18);
   color: var(--text);
 }
 
 button,
 select,
-textarea {
-  background: var(--surface);
+textarea,
+input {
   color: var(--text);
   border-color: var(--surface-border);
 }
 
-input {
-  color: var(--text);
-}
-
 button:hover:not(.bg-transparent),
 button:focus:not(.bg-transparent) {
-  background: var(--surface-strong);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 input::placeholder,
@@ -84,14 +84,14 @@ textarea::placeholder {
 .bg-blue-500,
 .bg-blue-600,
 .bg-blue-400 {
-  background: linear-gradient(135deg, #d9b16e, #c79d4a) !important;
-  color: #090a13 !important;
+  background: linear-gradient(135deg, #22d3ee, #38bdf8) !important;
+  color: #050816 !important;
 }
 
 .hover\:bg-blue-400:hover,
 .hover\:bg-blue-500:hover,
 .hover\:bg-blue-600:hover {
-  background: #e2c78d !important;
+  background: linear-gradient(135deg, #38bdf8, #22d3ee) !important;
 }
 
 .text-slate-400,
@@ -100,7 +100,9 @@ textarea::placeholder {
 .text-slate-200,
 .text-slate-600,
 .text-slate-700,
-.text-slate-800 {
+.text-slate-800,
+.text-slate-950,
+.text-slate-100 {
   color: var(--muted) !important;
 }
 
@@ -129,13 +131,11 @@ textarea::placeholder {
 }
 
 .bg-gradient-app {
-  background: radial-gradient(circle at top left, rgba(217, 177, 110, 0.08), transparent 22%),
-    radial-gradient(circle at bottom right, rgba(217, 177, 110, 0.06), transparent 20%),
-    var(--surface);
+  background: var(--gradient);
 }
 
 .shadow-custom {
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-soft);
 }
 
 button,

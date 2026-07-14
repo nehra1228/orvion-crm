@@ -44,7 +44,7 @@ export async function DELETE(
     );
   }
 
-  if (user.role === "ADMIN") {
+  if (user.role === "SUPER_ADMIN" || user.role === "COMPANY_ADMIN") {
     return NextResponse.json(
       { message: "Admins cannot be deleted." },
       { status: 400 }

@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+import { installTimeUppercase } from "@/lib/polyfills/time";
+import ClientSetup from "./components/ClientSetup";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Install on server during initial render so server-output matches client
+installTimeUppercase();
 
 export const metadata: Metadata = {
   title: "ORVION CRM",
@@ -26,10 +20,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
         {children}
+        <ClientSetup />
 
         <Toaster
           position="top-right"

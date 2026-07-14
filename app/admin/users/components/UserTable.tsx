@@ -312,7 +312,7 @@ setSelectedUser(null);
 
 setDeleteOpen(false);
 setSelectedUser(null);
-location.reload();;
+location.reload();
       }}
     />
   </div>

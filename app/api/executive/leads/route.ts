@@ -6,7 +6,7 @@ import { LeadRemark, LeadStatus } from "@prisma/client";
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "EXECUTIVE") {
+  if (!user || (user.role !== "EXECUTIVE" && user.role !== "TEAM_LEADER")) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,7 +26,11 @@ export async function POST(request: Request) {
 
   const lead = await prisma.lead.findUnique({ where: { id: leadId } });
 
-  if (!lead || lead.assignedToId !== user.id) {
+  const isAuthorizedForLead = user.role === "TEAM_LEADER"
+    ? lead?.teamId === user.teamId
+    : lead?.assignedToId === user.id;
+
+  if (!lead || !isAuthorizedForLead) {
     return NextResponse.json({ message: "Lead not found or unauthorized." }, { status: 404 });
   }
 
@@ -64,7 +68,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== "EXECUTIVE") {
+  if (!user || (user.role !== "EXECUTIVE" && user.role !== "TEAM_LEADER")) {
     return NextResponse.json(
       { message: "Unauthorized" },
       { status: 401 }
@@ -82,7 +86,13 @@ export async function PATCH(request: Request) {
       },
     });
 
-    if (!lead || lead.assignedToId !== user.id) {
+    const isAuthorizedForLead = lead
+      ? user.role === "TEAM_LEADER"
+        ? lead.teamId === user.teamId
+        : lead.assignedToId === user.id
+      : false;
+
+    if (!lead || !isAuthorizedForLead) {
       return NextResponse.json(
         { message: "Lead not found." },
         { status: 404 }

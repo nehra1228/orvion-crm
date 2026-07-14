@@ -4,9 +4,13 @@ import { useState } from "react";
 
 export default function UserForm() {
   const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("EXECUTIVE");
+  const [companyId, setCompanyId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [teamId, setTeamId] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -24,8 +28,9 @@ export default function UserForm() {
     try {
       const response = await fetch("/api/admin/users", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password, role }),
+        body: JSON.stringify({ username, email, password, role, fullName, companyId, departmentId, teamId }),
       });
 
       let result: any = null;
@@ -43,9 +48,13 @@ export default function UserForm() {
         console.info("User created", result);
         setStatus("User created successfully.");
         setUsername("");
+        setFullName("");
         setEmail("");
         setPassword("");
         setRole("EXECUTIVE");
+        setCompanyId("");
+        setDepartmentId("");
+        setTeamId("");
         window.location.reload();
       }
     } catch (err: any) {
@@ -58,11 +67,16 @@ export default function UserForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-slate-800 bg-slate-900 p-6">
-      <h3 className="text-xl font-semibold text-white">Create Executive</h3>
+      <h3 className="text-xl font-semibold text-white">Create User Account</h3>
 
       <div>
         <label className="text-sm text-slate-400">Username</label>
         <input value={username} onChange={(e) => setUsername(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
+      </div>
+
+      <div>
+        <label className="text-sm text-slate-400">Full Name</label>
+        <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
       </div>
 
       <div>
@@ -78,13 +92,34 @@ export default function UserForm() {
       <div>
         <label className="text-sm text-slate-400">Role</label>
         <select value={role} onChange={(e) => setRole(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none">
+          <option value="SUPER_ADMIN">Super Admin</option>
+          <option value="COMPANY_ADMIN">Company Admin</option>
+          <option value="BRANCH_MANAGER">Branch Manager</option>
+          <option value="DEPARTMENT_MANAGER">Department Manager</option>
+          <option value="TEAM_LEADER">Team Leader</option>
+          <option value="HR">HR</option>
           <option value="EXECUTIVE">Executive</option>
-          <option value="ADMIN">Admin</option>
+          <option value="TELECALLER">Telecaller</option>
         </select>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <label className="text-sm text-slate-400">Company</label>
+          <input value={companyId} onChange={(e) => setCompanyId(e.target.value)} placeholder="company id" className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
+        </div>
+        <div>
+          <label className="text-sm text-slate-400">Department</label>
+          <input value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} placeholder="department id" className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
+        </div>
+        <div>
+          <label className="text-sm text-slate-400">Team</label>
+          <input value={teamId} onChange={(e) => setTeamId(e.target.value)} placeholder="team id" className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
+        </div>
+      </div>
+
       <button type="submit" disabled={submitting} className="inline-flex items-center justify-center rounded-2xl bg-blue-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:opacity-50">
-        {submitting ? "Saving…" : "Create Executive"}
+        {submitting ? "Saving…" : "Create User"}
       </button>
 
       {status ? <p aria-live="polite" className="text-sm text-slate-300">{status}</p> : null}

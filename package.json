@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dialer:worker": "node scripts/dialer-worker.js",
+    "dialer:migrate": "prisma migrate dev --name dialer_models",
     "build": "next build",
     "vercel-build": "prisma generate && next build",
     "start": "next start",
@@ -15,7 +17,6 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@google/genai": "^2.11.0",
     "@hookform/resolvers": "^5.4.0",
     "@prisma/client": "^6.16.3",
     "axios": "^1.18.1",
@@ -29,7 +30,7 @@
     "lucide-react": "^0.542.0",
     "next": "16.2.10",
     "next-auth": "^4.24.14",
-    "openai": "^6.46.0",
+    "nodemailer": "^7.0.13",
     "pg": "^8.22.0",
     "prisma": "^6.16.3",
     "react": "19.2.0",
@@ -43,6 +44,7 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@prisma/engines": "^7.8.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/bcrypt": "^6.0.0",
     "@types/formidable": "^3.5.1",

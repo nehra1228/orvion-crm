@@ -60,9 +60,11 @@ const [rotation, setRotation] = useState({
       }
 
       router.push(
-        data.user?.role === "ADMIN"
-          ? "/admin/dashboard"
-          : "/executive/dashboard"
+        data.user?.role === "EXECUTIVE"
+          ? "/executive/dashboard"
+          : data.user?.role === "HR"
+          ? "/admin/hr"
+          : "/admin/dashboard"
       );
     } catch {
       setError("Unable to connect to server.");
