@@ -7,6 +7,7 @@ import { Banknote, CalendarCheck2, ChevronLeft, ChevronRight, CircleAlert, Clock
 
 type Employee = { id: string; employeeId?: string; name: string; email?: string; phone?: string; avatarUrl?: string; department?: string; designation?: string; executiveId?: string | null; executiveName?: string | null; status?: string; attendance?: string; joinedAt?: string; salary?: number; ctc?: number; attendancePercent?: number; lateDays?: number; workingHours?: number; assignedLeads?: number; completedCalls?: number; interested?: number; booked?: number; conversion?: number; documents?: { id: string; name: string }[] };
 type HRData = { items: Employee[]; total: number; page: number; pageSize: number; totalPages: number; metrics?: Record<string, number> };
+type AttendanceItem = { day: string; employeeId: string; name: string; email: string; department: string; role: string; status: string; createdAt: string };
 type Section = "Dashboard" | "Employees" | "Attendance" | "Departments" | "Payroll" | "Leave" | "Performance" | "Documents" | "Recruitment";
 
 const empty: HRData = { items: [], total: 0, page: 1, pageSize: 10, totalPages: 1 };
@@ -28,17 +29,38 @@ export default function HRMSPage() {
   const [status, setStatus] = useState(""), [page, setPage] = useState(1), [loading, setLoading] = useState(true), [error, setError] = useState("");
   const [drawer, setDrawer] = useState<Employee | null>(null), [selected, setSelected] = useState<string[]>([]), [notice, setNotice] = useState("");
   const [activeNav, setActiveNav] = useState<Section>("Attendance"), [now, setNow] = useState(() => new Date()), [loggingOut, setLoggingOut] = useState(false);
+  const [downloadFrom, setDownloadFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [downloadTo, setDownloadTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [downloading, setDownloading] = useState(false);
+  const [attendanceData, setAttendanceData] = useState<AttendanceItem[]>([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceError, setAttendanceError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const q = new URLSearchParams({ page: String(page), pageSize: "10" });
-      if (search) q.set("search", search); if (department) q.set("department", department); if (status) q.set("status", status);
-      const result = await api<HRData | { employees: Employee[]; total: number; totalPages?: number }>(`/api/hr/employees?${q}`);
-      setData("items" in result ? result : { items: result.employees, total: result.total, page, pageSize: 10, totalPages: result.totalPages ?? Math.max(1, Math.ceil(result.total / 10)) });
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to load employee records."); }
-    finally { setLoading(false); }
-  }, [department, page, search, status]);
+      if (activeNav === "Attendance") {
+        setAttendanceLoading(true); setAttendanceError("");
+        const q = new URLSearchParams({ from: downloadFrom, to: downloadTo });
+        const result = await api<{ items: AttendanceItem[] }>(`/api/hr/attendance?${q}`);
+        setAttendanceData(result.items ?? []);
+      } else {
+        const q = new URLSearchParams({ page: String(page), pageSize: "10" });
+        if (search) q.set("search", search); if (department) q.set("department", department); if (status) q.set("status", status);
+        const result = await api<HRData | { employees: Employee[]; total: number; totalPages?: number }>(`/api/hr/employees?${q}`);
+        setData("items" in result ? result : { items: result.employees, total: result.total, page, pageSize: 10, totalPages: result.totalPages ?? Math.max(1, Math.ceil(result.total / 10)) });
+      }
+    } catch (reason) {
+      if (activeNav === "Attendance") {
+        setAttendanceError(reason instanceof Error ? reason.message : "Unable to load attendance records.");
+      } else {
+        setError(reason instanceof Error ? reason.message : "Unable to load employee records.");
+      }
+    } finally {
+      setLoading(false);
+      setAttendanceLoading(false);
+    }
+  }, [activeNav, department, downloadFrom, downloadTo, page, search, status]);
 
   useEffect(() => { const t = setTimeout(load, 220); return () => clearTimeout(t); }, [load]);
   useEffect(() => { const t = window.setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
@@ -47,19 +69,45 @@ export default function HRMSPage() {
   const employees = data.items ?? [];
   const departments = useMemo(() => Array.from(new Set(employees.map(x => x.department).filter(Boolean))) as string[], [employees]);
   const attendance = useMemo(() => ({ present: employees.filter(x => x.attendance === "PRESENT").length, absent: employees.filter(x => x.attendance === "ABSENT").length, halfDay: employees.filter(x => x.attendance === "HALF_DAY").length, leave: employees.filter(x => x.attendance === "ON_LEAVE").length, late: employees.filter(x => (x.lateDays ?? 0) > 0).length }), [employees]);
+  const attendanceStats = useMemo(() => ({ present: attendanceData.filter(x => x.status === "PRESENT").length, absent: attendanceData.filter(x => x.status === "ABSENT").length, halfDay: attendanceData.filter(x => x.status === "HALF_DAY").length, leave: attendanceData.filter(x => x.status === "ON_LEAVE").length, total: attendanceData.length }), [attendanceData]);
   const metrics = { total: data.metrics?.total ?? data.total, present: data.metrics?.present ?? attendance.present, absent: data.metrics?.absent ?? attendance.absent, halfDay: data.metrics?.halfDay ?? attendance.halfDay, leave: data.metrics?.leave ?? attendance.leave, late: data.metrics?.late ?? attendance.late, joinings: data.metrics?.newJoinings ?? 0, birthdays: data.metrics?.birthdays ?? 0, pendingSalary: data.metrics?.pendingSalary ?? 0 };
   const allSelected = employees.length > 0 && employees.every(x => selected.includes(x.id));
   const toggle = (id: string) => setSelected(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
   const toggleAll = () => setSelected(allSelected ? [] : employees.map(x => x.id));
   const action = async (id: string, path: string, body?: unknown) => { try { await api(`/api/hr/employees/${id}/${path}`, { method: "POST", body: body ? JSON.stringify(body) : undefined }); setNotice("Employee record updated."); await load(); } catch (e) { setNotice(e instanceof Error ? e.message : "This action is not enabled by your HR API."); } };
   const logout = async () => { setLoggingOut(true); try { await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); } finally { localStorage.removeItem("orvion-login-username"); router.push("/login"); } };
+  const downloadAttendance = async () => {
+    if (!downloadFrom || !downloadTo) {
+      setNotice("Please choose both from and to dates.");
+      return;
+    }
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/hr/attendance?from=${downloadFrom}&to=${downloadTo}&format=csv`);
+      if (!res.ok) throw new Error("Failed to download attendance");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance-${downloadFrom}-${downloadTo}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setNotice(`Downloaded attendance ${downloadFrom} → ${downloadTo}`);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Unable to download attendance");
+    } finally {
+      setDownloading(false);
+    }
+  };
   const kpis: [string, number, LucideIcon][] = [["Total Employees", metrics.total, Users], ["Present Today", metrics.present, UserCheck], ["Absent", metrics.absent, CircleAlert], ["Half Day", metrics.halfDay, Clock3], ["On Leave", metrics.leave, CalendarCheck2], ["Late Entry", metrics.late, Clock3], ["New Joinings", metrics.joinings, UserPlus], ["Birthdays", metrics.birthdays, Gift], ["Pending Salary", metrics.pendingSalary, Landmark]];
 
   const cards = (items: [string, number][]) => <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-4">{items.map(([name, value]) => <div key={name} className="rounded-2xl border border-white/[.08] bg-slate-950/50 p-4 sm:p-5"><p className="text-sm text-slate-400">{name}</p><p className="mt-2 text-3xl font-semibold text-white">{value.toLocaleString()}</p></div>)}</div>;
   const intro = (eyebrow: string, title: string, description: string) => <div className={`${glass} rounded-[20px] p-4 sm:rounded-[24px] sm:p-6`}><p className="text-xs uppercase tracking-[.18em] text-cyan-300">{eyebrow}</p><h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">{title}</h2><p className="mt-2 max-w-3xl break-words text-sm leading-6 text-slate-400">{description}</p></div>;
   const section = () => {
     if (activeNav === "Employees") return <div className="space-y-5">{intro("Employee roster", "All employees", "Search, filter and manage the HR employee table.")} {cards([["Total employees", metrics.total], ["Active employees", employees.filter(x => x.status !== "INACTIVE").length], ["Departments", departments.length]])} <EmployeeTable /></div>;
-    if (activeNav === "Attendance") return <div className="space-y-5"><div className={`${glass} rounded-[20px] p-4 sm:rounded-[24px] sm:p-6`}><div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-end md:justify-between"><div className="min-w-0"><p className="text-xs uppercase tracking-[.18em] text-cyan-300">Attendance sheet</p><h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">Realtime attendance</h2><p className="mt-2 max-w-3xl break-words text-sm leading-6 text-slate-400">Updated automatically every 30 seconds. Review attendance states and employee records.</p></div><div className="flex shrink-0 flex-wrap gap-2"><Button label="Refresh" icon={RefreshCw} click={load} /><Button label="Employees" icon={Users} click={() => setActiveNav("Employees")} /></div></div><div className="mt-5">{cards([["Present", attendance.present], ["Absent", attendance.absent], ["Half day", attendance.halfDay], ["On leave", attendance.leave]])}</div></div><EmployeeTable attendanceOnly /></div>;
+    if (activeNav === "Attendance") return <div className="space-y-5"><div className={`${glass} rounded-[20px] p-4 sm:rounded-[24px] sm:p-6`}><div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-end md:justify-between"><div className="min-w-0"><p className="text-xs uppercase tracking-[.18em] text-cyan-300">Attendance sheet</p><h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">Realtime attendance</h2><p className="mt-2 max-w-3xl break-words text-sm leading-6 text-slate-400">Updated automatically every 30 seconds. Review attendance states and employee records.</p></div><div className="flex shrink-0 flex-wrap items-center gap-3"><div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[.08] bg-slate-950/50 p-3"><label className="text-slate-300 text-xs">From<input type="date" value={downloadFrom} onChange={(e) => setDownloadFrom(e.target.value)} className="ml-2 rounded-lg border border-white/[.1] bg-slate-900/80 px-2 py-1 text-sm text-slate-100" /></label><label className="text-slate-300 text-xs">To<input type="date" value={downloadTo} onChange={(e) => setDownloadTo(e.target.value)} className="ml-2 rounded-lg border border-white/[.1] bg-slate-900/80 px-2 py-1 text-sm text-slate-100" /></label></div><Button label={downloading ? "Downloading..." : "Download"} icon={FileText} click={downloadAttendance} /><Button label="Refresh" icon={RefreshCw} click={load} /><Button label="Employees" icon={Users} click={() => setActiveNav("Employees")} /></div></div><div className="mt-5">{cards([["Present", attendance.present], ["Absent", attendance.absent], ["Half day", attendance.halfDay], ["On leave", attendance.leave]])}</div></div>{attendanceLoading ? <Loading /> : attendanceError ? <Failure error={attendanceError} retry={load} /> : <AttendanceRecordTable items={attendanceData} />}</div>;
     if (activeNav === "Dashboard") return <div className="space-y-5">{intro("Dashboard overview", "HR Operations Dashboard", "A live summary of HR attendance, hiring and people health.")} {cards([["Present", attendance.present], ["Absent", attendance.absent], ["Half day", attendance.halfDay], ["On leave", attendance.leave]])}</div>;
     if (activeNav === "Departments") return <div className="space-y-5">{intro("Departments", "Team structures", "Review department coverage, active headcount and team health.")}<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{departments.map(dept => <div key={dept} className="rounded-3xl border border-white/[.08] bg-slate-950/50 p-5"><p className="text-sm uppercase tracking-[.18em] text-slate-400">{dept}</p><p className="mt-3 text-3xl font-semibold text-white">{employees.filter(x => x.department === dept).length}</p></div>)}</div></div>;
     const map: Record<Exclude<Section, "Dashboard" | "Employees" | "Attendance" | "Departments">, [string, string, string]> = { Payroll: ["Payroll", "Payroll overview", "Summary of salary costs and pending payroll actions."], Leave: ["Leave management", "Leave overview", "Track leave counts and absence trends across your teams."], Performance: ["Performance", "Team performance", "Review calls, conversions and attendance-driven output."], Documents: ["Documents", "Documents hub", "Upload and manage HR documents for employees and teams."], Recruitment: ["Recruitment", "Hiring pipeline", "Track open roles, candidate progress, and HR hiring workflows."] };
@@ -67,6 +115,7 @@ export default function HRMSPage() {
   };
 
   function EmployeeTable({ attendanceOnly = false }: { attendanceOnly?: boolean }) { return <div className={`${glass} min-w-0 overflow-hidden rounded-[20px] sm:rounded-[24px]`}>{loading ? <Loading /> : error ? <Failure error={error} retry={load} /> : !employees.length ? <Empty /> : <><div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.07] px-4 py-3 sm:px-5"><p className="text-sm font-medium text-slate-200">{attendanceOnly ? "Attendance details" : "Employee database"}<span className="ml-2 text-xs text-slate-500">{data.total} records</span></p>{!attendanceOnly && <button onClick={toggleAll} className="rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300">{allSelected ? "Clear selection" : "Select page"}</button>}</div><div className="w-full max-w-full overflow-x-auto overscroll-x-contain"><table className="w-full min-w-[740px] text-left text-sm sm:min-w-[900px] xl:min-w-[1150px]"><thead className="bg-white/[.025] text-[10px] uppercase tracking-[.11em] text-slate-500"><tr>{["", "Employee", ...(attendanceOnly ? ["Department", "Attendance", "Late days", "Joined", "Status"] : ["ID", "Department", "Executive account", "Attendance", "Performance", "Salary", "Status", "Joined", ""])].map((x, i) => <th key={`${x}-${i}`} className="px-3 py-3.5 first:pl-5">{x}</th>)}</tr></thead><tbody>{employees.map(e => attendanceOnly ? <AttendanceRow key={e.id} employee={e} selected={selected.includes(e.id)} toggle={() => toggle(e.id)} view={() => setDrawer(e)} /> : <EmployeeRow key={e.id} employee={e} selected={selected.includes(e.id)} toggle={() => toggle(e.id)} view={() => setDrawer(e)} edit={() => action(e.id, "edit")} deactivate={() => action(e.id, "status", { status: "INACTIVE" })} />)}</tbody></table></div><Pager data={data} page={page} set={setPage} /></>}</div> }
+function AttendanceRecordTable({ items }: { items: AttendanceItem[] }) { return <div className={`${glass} min-w-0 overflow-hidden rounded-[20px] sm:rounded-[24px]`}><div className="flex items-center justify-between border-b border-white/[.08] px-4 py-3 sm:px-5"><p className="text-sm font-medium text-slate-200">Attendance details<span className="ml-2 text-xs text-slate-500">{items.length} records</span></p></div><div className="w-full max-w-full overflow-x-auto overscroll-x-contain"><table className="w-full min-w-[900px] text-left text-sm sm:min-w-[1100px]"><thead className="bg-white/[.05] text-[10px] uppercase tracking-[.11em] text-slate-500"><tr><th className="px-3 py-3.5 first:pl-5">Employee</th><th className="px-3 py-3.5">Department</th><th className="px-3 py-3.5">Status</th><th className="px-3 py-3.5">Date</th><th className="px-3 py-3.5">Time</th><th className="px-3 py-3.5">Role</th><th className="px-3 py-3.5">Email</th></tr></thead><tbody>{items.map((item) => <tr key={`${item.employeeId}-${item.day}`} className="border-t border-white/[.06] text-slate-300 hover:bg-cyan-400/[.03]"><td className="px-3 py-3"><div className="font-medium text-white">{item.name}</div><div className="text-[11px] text-slate-500">{item.employeeId}</div></td><td className="px-3 py-3">{item.department}</td><td className="px-3 py-3"><Badge value={item.status} /></td><td className="px-3 py-3">{new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(item.day))}</td><td className="px-3 py-3">{new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.createdAt))}</td><td className="px-3 py-3">{item.role}</td><td className="px-3 py-3">{item.email || "—"}</td></tr>)}</tbody></table></div></div>; }
 
   return <main className="relative min-h-screen overflow-x-hidden bg-[#050816] px-3 py-3 text-slate-100 sm:px-5 sm:py-5 lg:px-8"><div className="pointer-events-none absolute inset-0 overflow-hidden"><div className="absolute -left-40 -top-32 h-[480px] w-[480px] rounded-full bg-cyan-500/[.12] blur-[130px]" /><div className="absolute -right-40 top-1/3 h-[500px] w-[500px] rounded-full bg-blue-600/[.12] blur-[150px]" /></div><div className="relative mx-auto max-w-[1800px] space-y-4 sm:space-y-5"><header className={`${glass} flex min-w-0 flex-col gap-4 rounded-[20px] p-4 sm:rounded-[28px] sm:p-5 2xl:flex-row 2xl:items-end 2xl:justify-between`}><div className="min-w-0"><p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-cyan-300"><span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-cyan-300" />ORVION · People operations</p><h1 className="mt-3 break-words text-2xl font-semibold tracking-tight text-white sm:text-4xl">Good morning, HR team</h1><p className="mt-2 break-words text-sm leading-6 text-slate-400">{new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(now)} · Workforce intelligence in one place.</p></div><div className="flex flex-wrap gap-2"><Button label="Add Executive" icon={UserPlus} primary click={() => setNotice("Executive creation can be opened here.")} /><Button label="Mark Attendance" icon={CalendarCheck2} click={() => setActiveNav("Attendance")} /><Button label={loggingOut ? "Logging out" : "Logout"} icon={LogOut} click={logout} /><Button label="Refresh" icon={RefreshCw} click={load} /></div></header>{notice && <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/[.07] px-4 py-3 text-sm text-cyan-100"><span>{notice}</span><button onClick={() => setNotice("")}><X className="h-4 w-4" /></button></div>}<section className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-9">{kpis.map(([name, value, Icon]) => <button key={name} onClick={() => setActiveNav(name === "Pending Salary" ? "Payroll" : name === "On Leave" ? "Leave" : name === "Total Employees" ? "Employees" : "Attendance")} className={`${glass} min-w-0 rounded-[20px] p-4 text-left`}><div className="flex items-center justify-between gap-2"><p className="truncate text-[11px] text-slate-400">{name}</p><Icon className="h-3.5 w-3.5 shrink-0 text-cyan-300" /></div><p className="mt-2 text-2xl font-semibold text-white">{value.toLocaleString()}</p></button>)}</section><div className="grid min-w-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-5"><aside className={`${glass} min-w-0 rounded-[20px] p-2 sm:p-3 lg:sticky lg:top-5 lg:h-fit lg:rounded-[24px]`}><p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[.15em] text-slate-500">HR workspace</p><div className="flex gap-1 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible">{nav.map((item, i) => <button key={item} onClick={() => setActiveNav(item)} className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition lg:w-full lg:gap-3 ${activeNav === item ? "bg-gradient-to-r from-cyan-400/20 to-blue-500/10 text-cyan-100 ring-1 ring-cyan-400/25" : "text-slate-400 hover:bg-white/[.05] hover:text-slate-200"}`}><span className={`h-1.5 w-1.5 rounded-full ${activeNav === item ? "bg-cyan-300" : "bg-current opacity-50"}`} />{item}<span className="ml-auto hidden text-[10px] text-slate-600 lg:inline">0{i + 1}</span></button>)}</div></aside><div className="min-w-0 space-y-5">{section()}</div></div></div><AnimatePresence>{drawer && <Drawer employee={drawer} close={() => setDrawer(null)} action={action} />}</AnimatePresence></main>;
 }

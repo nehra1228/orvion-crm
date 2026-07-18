@@ -97,5 +97,25 @@ export async function GET(request: Request) {
     })
   );
 
+  const format = url.searchParams.get("format");
+  if (format === "csv") {
+    const headers = ["day", "employeeId", "name", "email", "department", "role", "status", "createdAt"];
+    const escape = (s: any) => {
+      if (s === undefined || s === null) return "";
+      const str = String(s);
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+    const rows = [headers.join(",")].concat(
+      items.map((it) => headers.map((h) => escape((it as any)[h])).join(","))
+    );
+    const csv = rows.join("\n");
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="attendance-${from}-${to}.csv"`,
+      },
+    });
+  }
+
   return NextResponse.json({ items });
 }

@@ -52,3 +52,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
   }
 }
+
+// Temporary: support GET for quick availability checks in browser
+export async function GET() {
+  try {
+    return NextResponse.json({ ok: true, method: "GET", message: "Login route is reachable" });
+  } catch (err) {
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+  }
+}
+
+// Temporary: respond to preflight OPTIONS requests (CORS preflight)
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
+}
