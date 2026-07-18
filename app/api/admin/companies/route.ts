@@ -39,3 +39,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create company" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const id = String(body?.id || "").trim();
+
+    if (!id) {
+      return NextResponse.json({ error: "Company id is required" }, { status: 400 });
+    }
+
+    await prisma.company.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE companies error:", error);
+    return NextResponse.json({ error: "Failed to delete company" }, { status: 500 });
+  }
+}

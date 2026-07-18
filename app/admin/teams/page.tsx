@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { UsersRound, Loader2, PlusCircle } from "lucide-react";
+import { UsersRound, Loader2, PlusCircle, Trash2 } from "lucide-react";
 
 type Company = { id: string; name: string; code: string };
 type Department = { id: string; name: string; code: string; companyId?: string | null };
@@ -15,6 +15,7 @@ export default function TeamsPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", code: "", companyId: "", departmentId: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -110,6 +111,36 @@ export default function TeamsPage() {
     setSaving(false);
   }
 
+  async function handleDelete(id: string) {
+    if (!window.confirm("Delete this team?")) return;
+
+    setDeletingId(id);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/teams", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Unable to delete team");
+      } else {
+        setMessage("Team deleted");
+        await loadData();
+      }
+    } catch (error) {
+      console.error("handleDelete error:", error);
+      setError("Unable to delete team, please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -170,7 +201,7 @@ export default function TeamsPage() {
                 {teams.map((team) => {
                   const members = users.filter((u) => u.teamId === team.id);
                   return (
-                    <TeamCard key={team.id} team={team} members={members} />
+                    <TeamCard key={team.id} team={team} members={members} deleting={deletingId === team.id} onDelete={handleDelete} />
                   );
                 })}
               </div>
@@ -182,7 +213,7 @@ export default function TeamsPage() {
   );
 }
 
-  function TeamCard({ team, members }: { team: Team; members: any[] }) {
+  function TeamCard({ team, members, deleting, onDelete }: { team: Team; members: any[]; deleting: boolean; onDelete: (id: string) => void }) {
     const [open, setOpen] = useState(false);
     return (
       <div className="rounded-2xl border border-white/10 bg-[#111827] p-4">
@@ -193,6 +224,9 @@ export default function TeamsPage() {
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen((s) => !s)} className="rounded bg-slate-800 px-3 py-1 text-sm text-white">Members ({members.length})</button>
+            <button type="button" onClick={() => onDelete(team.id)} disabled={deleting} className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-50">
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
+            </button>
             <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">ACTIVE</span>
           </div>
         </div>

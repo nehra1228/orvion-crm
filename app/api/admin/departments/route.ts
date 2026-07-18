@@ -44,3 +44,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create department" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const id = String(body?.id || "").trim();
+
+    if (!id) {
+      return NextResponse.json({ error: "Department id is required" }, { status: 400 });
+    }
+
+    await prisma.department.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE departments error:", error);
+    return NextResponse.json({ error: "Failed to delete department" }, { status: 500 });
+  }
+}

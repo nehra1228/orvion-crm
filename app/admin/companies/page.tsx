@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Building2, Loader2, PlusCircle } from "lucide-react";
+import { Building2, Loader2, PlusCircle, Trash2 } from "lucide-react";
 
 type Company = {
   id: string;
@@ -16,6 +16,7 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", code: "", businessType: "REAL_ESTATE" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -72,6 +73,35 @@ export default function CompaniesPage() {
     }
 
     setSaving(false);
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Delete this company?")) return;
+
+    setDeletingId(id);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/companies", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Unable to delete company");
+      } else {
+        setMessage("Company deleted");
+        await loadCompanies();
+      }
+    } catch (error) {
+      console.error("handleDelete error:", error);
+      setError("Unable to delete company, please try again.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -132,7 +162,12 @@ export default function CompaniesPage() {
                         <p className="font-semibold text-white">{company.name}</p>
                         <p className="mt-1 text-sm text-slate-400">Code: {company.code} · {company.businessType.replace("_", " ")}</p>
                       </div>
-                      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">{company.status}</span>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => void handleDelete(company.id)} disabled={deletingId === company.id} className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-50">
+                          {deletingId === company.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
+                        </button>
+                        <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">{company.status}</span>
+                      </div>
                     </div>
                   </div>
                 ))}

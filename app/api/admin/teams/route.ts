@@ -58,3 +58,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create team" }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const id = String(body?.id || "").trim();
+
+    if (!id) {
+      return NextResponse.json({ error: "Team id is required" }, { status: 400 });
+    }
+
+    await prisma.team.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE teams error:", error);
+    return NextResponse.json({ error: "Failed to delete team" }, { status: 500 });
+  }
+}

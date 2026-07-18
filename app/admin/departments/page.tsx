@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Layers3, Loader2, PlusCircle } from "lucide-react";
+import { Layers3, Loader2, PlusCircle, Trash2 } from "lucide-react";
 
 type Company = { id: string; name: string; code: string };
 type Department = { id: string; name: string; code: string; companyId: string; company?: Company };
@@ -12,6 +12,7 @@ export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", code: "", companyId: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -85,6 +86,35 @@ export default function DepartmentsPage() {
     setSaving(false);
   }
 
+  async function handleDelete(id: string) {
+    if (!window.confirm("Delete this department?")) return;
+
+    setDeletingId(id);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch("/api/admin/departments", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Unable to delete department");
+      } else {
+        setMessage("Department deleted");
+        await loadData();
+      }
+    } catch (error) {
+      console.error("handleDelete error:", error);
+      setError("Unable to delete department, please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -142,7 +172,12 @@ export default function DepartmentsPage() {
                         <p className="font-semibold text-white">{department.name}</p>
                         <p className="mt-1 text-sm text-slate-400">Code: {department.code} · Company: {department.company?.name || department.companyId}</p>
                       </div>
-                      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">ACTIVE</span>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => void handleDelete(department.id)} disabled={deletingId === department.id} className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-50">
+                          {deletingId === department.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
+                        </button>
+                        <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">ACTIVE</span>
+                      </div>
                     </div>
                   </div>
                 ))}
