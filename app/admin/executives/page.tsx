@@ -29,6 +29,8 @@ export default function ExecutivesPage() {
   const [executives, setExecutives] = useState<Executive[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deletingMap, setDeletingMap] = useState<Record<string, boolean>>({});
+  const [deletingUserMap, setDeletingUserMap] = useState<Record<string, boolean>>({});
 
   async function fetchExecutives() {
     setLoading(true);
@@ -58,6 +60,80 @@ export default function ExecutivesPage() {
   useEffect(() => {
     fetchExecutives();
   }, []);
+
+  async function deleteAllLeadsForExecutive(userId: string) {
+    if (!userId) return;
+    const ok = confirm(
+      "Delete all leads assigned to this executive? This cannot be undone."
+    );
+    if (!ok) return;
+
+    setDeletingMap((s) => ({ ...s, [userId]: true }));
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/leads`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(body?.message || `Failed (${res.status})`);
+      }
+
+      await fetchExecutives();
+    } catch (err: any) {
+      console.error("deleteAllLeads error:", err);
+      alert(err?.message || "Failed to delete leads.");
+    } finally {
+      setDeletingMap((s) => ({ ...s, [userId]: false }));
+    }
+  }
+
+  async function deleteUser(userId: string) {
+    if (!userId) return;
+    const ok = confirm("Delete this user? This cannot be undone.");
+    if (!ok) return;
+
+    setDeletingUserMap((s) => ({ ...s, [userId]: true }));
+    try {
+      let res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      let body = await res.json().catch(() => null);
+
+      // If user has leads, try to delete leads then retry
+      if (!res.ok && body?.message && body.message.includes("delete this executive's leads")) {
+        const delLeads = await fetch(`/api/admin/users/${userId}/leads`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!delLeads.ok) {
+          const b = await delLeads.json().catch(() => null);
+          throw new Error(b?.message || `Failed to delete leads (${delLeads.status})`);
+        }
+
+        // retry user delete
+        res = await fetch(`/api/admin/users/${userId}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        body = await res.json().catch(() => null);
+      }
+
+      if (!res.ok) {
+        throw new Error(body?.message || `Failed to delete user (${res.status})`);
+      }
+
+      await fetchExecutives();
+    } catch (err: any) {
+      console.error("deleteUser error:", err);
+      alert(err?.message || "Failed to delete user.");
+    } finally {
+      setDeletingUserMap((s) => ({ ...s, [userId]: false }));
+    }
+  }
 
   const filteredExecutives = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -213,8 +289,19 @@ export default function ExecutivesPage() {
                         <button className="flex-1 min-w-[120px] rounded-xl bg-yellow-500/20 px-3 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30">
                           Reset Password
                         </button>
-                        <button className="flex-1 min-w-[120px] rounded-xl bg-red-500/20 px-3 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/30">
-                          Delete
+                        <button
+                          onClick={() => deleteAllLeadsForExecutive(user.id)}
+                          disabled={!!deletingMap[user.id]}
+                          className="flex-1 min-w-[120px] rounded-xl bg-red-500/20 px-3 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/30 disabled:opacity-50"
+                        >
+                          {deletingMap[user.id] ? "Deleting..." : "Delete All Leads"}
+                        </button>
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          disabled={!!deletingUserMap[user.id]}
+                          className="flex-1 min-w-[120px] rounded-xl bg-red-500/20 px-3 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/30 disabled:opacity-50"
+                        >
+                          {deletingUserMap[user.id] ? "Deleting..." : "Delete"}
                         </button>
                       </div>
                     </div>
@@ -306,8 +393,19 @@ export default function ExecutivesPage() {
                             <button className="whitespace-nowrap rounded-xl bg-yellow-500/20 px-3 py-2 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/30">
                               Reset Password
                             </button>
-                            <button className="whitespace-nowrap rounded-xl bg-red-500/20 px-3 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/30">
-                              Delete
+                            <button
+                              onClick={() => deleteAllLeadsForExecutive(user.id)}
+                              disabled={!!deletingMap[user.id]}
+                              className="whitespace-nowrap rounded-xl bg-red-500/20 px-3 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/30 disabled:opacity-50"
+                            >
+                              {deletingMap[user.id] ? "Deleting..." : "Delete All Leads"}
+                            </button>
+                            <button
+                              onClick={() => deleteUser(user.id)}
+                              disabled={!!deletingUserMap[user.id]}
+                              className="whitespace-nowrap rounded-xl bg-red-500/20 px-3 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/30 disabled:opacity-50"
+                            >
+                              {deletingUserMap[user.id] ? "Deleting..." : "Delete"}
                             </button>
                           </div>
                         </td>

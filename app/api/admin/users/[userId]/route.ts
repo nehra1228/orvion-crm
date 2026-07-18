@@ -48,30 +48,28 @@ export async function DELETE(
     );
   }
 
-  if (user.role === "SUPER_ADMIN" || user.role === "COMPANY_ADMIN") {
-    return NextResponse.json(
-      { message: "Admins cannot be deleted." },
-      { status: 400 }
-    );
+  // Log current admin and target user for debugging.
+  try {
+    console.info("admin delete attempt:", {
+      by: { id: current.id, role: current.role, companyId: current.companyId },
+      target: { id: userId, role: user?.role, companyId: user?.companyId },
+    });
+
+    // Allow admins to delete any user. Remove dependent rows that use RESTRICT, nullify optional owners, then delete user.
+    const result = await prisma.$transaction([
+      prisma.activity.deleteMany({ where: { userId } }),
+      prisma.call.deleteMany({ where: { executiveId: userId } }),
+      prisma.upload.deleteMany({ where: { uploadedById: userId } }),
+      prisma.executiveState.deleteMany({ where: { userId } }),
+      prisma.lead.deleteMany({ where: { assignedToId: userId } }),
+      prisma.campaign.updateMany({ where: { ownerId: userId }, data: { ownerId: null } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+
+    const deletedLeads = result[4]?.count ?? null;
+    return NextResponse.json({ success: true, deletedLeads });
+  } catch (err: any) {
+    console.error("admin delete user error:", err);
+    return NextResponse.json({ message: err?.message || "Failed to delete user." }, { status: 500 });
   }
-
-  const leadCount = await prisma.lead.count({
-    where: { assignedToId: userId },
-  });
-
-  if (leadCount > 0) {
-    return NextResponse.json(
-      {
-        message:
-          "Please delete this executive's leads first.",
-      },
-      { status: 400 }
-    );
-  }
-
-  await prisma.user.delete({
-    where: { id: userId },
-  });
-
-  return NextResponse.json({ success: true });
 }
