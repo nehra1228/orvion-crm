@@ -68,19 +68,16 @@ export default function LeadTable() {
   async function fetchLeads() {
     try {
 
-      const res = await fetch("/api/leads");
+      const res = await fetch("/api/leads", { credentials: "include" });
 
-if (!res.ok) {
-  throw new Error(`API Error: ${res.status}`);
-}
+      if (!res.ok) {
+        throw new Error(`API Error: ${res.status}`);
+      }
 
-const text = await res.text();
+      const data = await res.json();
 
-console.log(text);
-
-const data = JSON.parse(text);
-
-      setLeads(data);
+      // API returns { items, total, ... } — accept either shape
+      setLeads(Array.isArray(data) ? data : data.items || []);
 
     } catch (err) {
       console.error(err);
@@ -92,8 +89,8 @@ const data = JSON.parse(text);
   async function fetchExecutives() {
     try {
       const [executiveRes, teamLeaderRes] = await Promise.all([
-        fetch("/api/users?role=EXECUTIVE"),
-        fetch("/api/users?role=TEAM_LEADER"),
+        fetch("/api/users?role=EXECUTIVE", { credentials: "include" }),
+        fetch("/api/users?role=TEAM_LEADER", { credentials: "include" }),
       ]);
 
       if (executiveRes.ok) {
@@ -179,11 +176,17 @@ const data = JSON.parse(text);
 
     try {
 
-      await fetch(`/api/leads/${id}`, {
+      const res = await fetch(`/api/leads/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
-      fetchLeads();
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Delete failed: ${res.status} ${body}`);
+      }
+
+      await fetchLeads();
 
     } catch (err) {
 
@@ -204,11 +207,15 @@ const data = JSON.parse(text);
     if (!ok) return;
 
     for (const id of selectedLeads) {
-
-      await fetch(`/api/leads/${id}`, {
+      const res = await fetch(`/api/leads/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error(`Failed deleting ${id}: ${res.status} ${body}`);
+      }
     }
 
     setSelectedLeads([]);
@@ -225,6 +232,7 @@ const data = JSON.parse(text);
 
     await fetch("/api/leads/bulk-assign", {
       method: "PATCH",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
