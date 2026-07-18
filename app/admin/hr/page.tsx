@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, CalendarCheck2, ChevronLeft, ChevronRight, CircleAlert, Clock3, FileText, Gift, Landmark, LogOut, MoreHorizontal, RefreshCw, ShieldCheck, Trash2, UserCheck, UserPlus, Users, X, type LucideIcon } from "lucide-react";
+import { Banknote, CalendarCheck2, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Clock3, FileText, Gift, Landmark, LogOut, MoreHorizontal, RefreshCw, ShieldCheck, Trash2, UserCheck, UserPlus, Users, X, type LucideIcon } from "lucide-react";
 
 type Employee = { id: string; employeeId?: string; name: string; email?: string; phone?: string; avatarUrl?: string; department?: string; designation?: string; executiveId?: string | null; executiveName?: string | null; status?: string; attendance?: string; joinedAt?: string; salary?: number; ctc?: number; attendancePercent?: number; lateDays?: number; workingHours?: number; assignedLeads?: number; completedCalls?: number; interested?: number; booked?: number; conversion?: number; documents?: { id: string; name: string }[] };
 type HRData = { items: Employee[]; total: number; page: number; pageSize: number; totalPages: number; metrics?: Record<string, number> };
 type AttendanceItem = { day: string; employeeId: string; name: string; email: string; department: string; role: string; status: string; createdAt: string };
+type AttendanceResponse = { counts?: { present: number; absent: number; halfDay: number; leave: number; late: number; total: number }; items?: AttendanceItem[] };
 type Section = "Dashboard" | "Employees" | "Attendance" | "Departments" | "Payroll" | "Leave" | "Performance" | "Documents" | "Recruitment";
 
 const empty: HRData = { items: [], total: 0, page: 1, pageSize: 10, totalPages: 1 };
@@ -17,7 +18,11 @@ const label = (value?: string | null) => value ? value.replaceAll("_", " ").toLo
 const date = (value?: string | null) => value ? new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)) : "—";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
+  const response = await fetch(url, {
+    ...init,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...init?.headers },
+  });
   const body = await response.json().catch(() => null);
   if (!response.ok) throw new Error(body?.message || body?.error?.message || "Request failed.");
   return body?.data ?? body;
@@ -33,8 +38,11 @@ export default function HRMSPage() {
   const [downloadTo, setDownloadTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [downloading, setDownloading] = useState(false);
   const [attendanceData, setAttendanceData] = useState<AttendanceItem[]>([]);
+  const [attendanceCounts, setAttendanceCounts] = useState({ present: 0, absent: 0, halfDay: 0, leave: 0, late: 0, total: 0 });
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceError, setAttendanceError] = useState("");
+  const [userRole, setUserRole] = useState<string>("");
+  const [isSuperHr, setIsSuperHr] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -42,7 +50,16 @@ export default function HRMSPage() {
       if (activeNav === "Attendance") {
         setAttendanceLoading(true); setAttendanceError("");
         const q = new URLSearchParams({ from: downloadFrom, to: downloadTo });
-        const result = await api<{ items: AttendanceItem[] }>(`/api/hr/attendance?${q}`);
+        const result = await api<AttendanceResponse>(`/api/hr/attendance?${q}`);
+        const counts = result.counts ?? {
+          present: result.items?.filter((x) => x.status === "PRESENT").length ?? 0,
+          absent: result.items?.filter((x) => x.status === "ABSENT").length ?? 0,
+          halfDay: result.items?.filter((x) => x.status === "HALF_DAY").length ?? 0,
+          leave: result.items?.filter((x) => x.status === "ON_LEAVE").length ?? 0,
+          late: result.items?.filter((x) => x.status === "LATE").length ?? 0,
+          total: result.items?.length ?? 0,
+        };
+        setAttendanceCounts(counts);
         setAttendanceData(result.items ?? []);
       } else {
         const q = new URLSearchParams({ page: String(page), pageSize: "10" });
@@ -62,14 +79,26 @@ export default function HRMSPage() {
     }
   }, [activeNav, department, downloadFrom, downloadTo, page, search, status]);
 
+  const loadUser = useCallback(async () => {
+    try {
+      const result = await api<{ user: { id: string; role: string } }>("/api/users/me", { method: "GET" });
+      setUserRole(result.user?.role ?? "");
+      setIsSuperHr(result.user?.role === "SUPER_ADMIN");
+    } catch {
+      setUserRole("");
+      setIsSuperHr(false);
+    }
+  }, []);
+
   useEffect(() => { const t = setTimeout(load, 220); return () => clearTimeout(t); }, [load]);
+  useEffect(() => { loadUser(); }, [loadUser]);
   useEffect(() => { const t = window.setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
   useEffect(() => { const t = window.setInterval(load, 30000); return () => clearInterval(t); }, [load]);
 
   const employees = data.items ?? [];
   const departments = useMemo(() => Array.from(new Set(employees.map(x => x.department).filter(Boolean))) as string[], [employees]);
   const attendance = useMemo(() => ({ present: employees.filter(x => x.attendance === "PRESENT").length, absent: employees.filter(x => x.attendance === "ABSENT").length, halfDay: employees.filter(x => x.attendance === "HALF_DAY").length, leave: employees.filter(x => x.attendance === "ON_LEAVE").length, late: employees.filter(x => (x.lateDays ?? 0) > 0).length }), [employees]);
-  const attendanceStats = useMemo(() => ({ present: attendanceData.filter(x => x.status === "PRESENT").length, absent: attendanceData.filter(x => x.status === "ABSENT").length, halfDay: attendanceData.filter(x => x.status === "HALF_DAY").length, leave: attendanceData.filter(x => x.status === "ON_LEAVE").length, total: attendanceData.length }), [attendanceData]);
+  const attendanceStats = useMemo(() => ({ present: attendanceCounts.present, absent: attendanceCounts.absent, halfDay: attendanceCounts.halfDay, leave: attendanceCounts.leave, late: attendanceCounts.late, total: attendanceCounts.total }), [attendanceCounts]);
   const metrics = { total: data.metrics?.total ?? data.total, present: data.metrics?.present ?? attendance.present, absent: data.metrics?.absent ?? attendance.absent, halfDay: data.metrics?.halfDay ?? attendance.halfDay, leave: data.metrics?.leave ?? attendance.leave, late: data.metrics?.late ?? attendance.late, joinings: data.metrics?.newJoinings ?? 0, birthdays: data.metrics?.birthdays ?? 0, pendingSalary: data.metrics?.pendingSalary ?? 0 };
   const allSelected = employees.length > 0 && employees.every(x => selected.includes(x.id));
   const toggle = (id: string) => setSelected(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
@@ -97,7 +126,26 @@ export default function HRMSPage() {
       setNotice(e instanceof Error ? e.message : "Unable to delete executive.");
     }
   };
-  const action = async (id: string, path: string, body?: unknown) => { try { await api(`/api/hr/employees/${id}/${path}`, { method: "POST", body: body ? JSON.stringify(body) : undefined }); setNotice("Employee record updated."); await load(); } catch (e) { setNotice(e instanceof Error ? e.message : "This action is not enabled by your HR API."); } };
+  const action = async (id: string, path: string, body?: unknown) => {
+    try {
+      await api(`/api/hr/employees/${id}/${path}`, { method: "POST", body: body ? JSON.stringify(body) : undefined });
+      setNotice("Employee record updated.");
+      await load();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "This action is not enabled by your HR API.");
+    }
+  };
+  const markAttendance = async (id?: string) => {
+    try {
+      const body: Record<string, string> = { status: "PRESENT" };
+      if (id) body.userId = id;
+      await api(`/api/hr/attendance/mark`, { method: "POST", body: JSON.stringify(body) });
+      setNotice(id ? "Attendance marked for employee." : "Attendance marked.");
+      await load();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Unable to mark attendance.");
+    }
+  };
   const logout = async () => { setLoggingOut(true); try { await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); } finally { localStorage.removeItem("orvion-login-username"); router.push("/login"); } };
   const downloadAttendance = async () => {
     if (!downloadFrom || !downloadTo) {
@@ -130,8 +178,8 @@ export default function HRMSPage() {
   const intro = (eyebrow: string, title: string, description: string) => <div className={`${glass} rounded-[20px] p-4 sm:rounded-[24px] sm:p-6`}><p className="text-xs uppercase tracking-[.18em] text-cyan-300">{eyebrow}</p><h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">{title}</h2><p className="mt-2 max-w-3xl break-words text-sm leading-6 text-slate-400">{description}</p></div>;
   const section = () => {
     if (activeNav === "Employees") return <div className="space-y-5">{intro("Employee roster", "All employees", "Search, filter and manage the HR employee table.")} {cards([["Total employees", metrics.total], ["Active employees", employees.filter(x => x.status !== "INACTIVE").length], ["Departments", departments.length]])} <EmployeeTable /></div>;
-    if (activeNav === "Attendance") return <div className="space-y-5"><div className={`${glass} rounded-[20px] p-4 sm:rounded-[24px] sm:p-6`}><div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-end md:justify-between"><div className="min-w-0"><p className="text-xs uppercase tracking-[.18em] text-cyan-300">Attendance sheet</p><h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">Realtime attendance</h2><p className="mt-2 max-w-3xl break-words text-sm leading-6 text-slate-400">Updated automatically every 30 seconds. Review attendance states and employee records.</p></div><div className="flex shrink-0 flex-wrap items-center gap-3"><div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[.08] bg-slate-950/50 p-3"><label className="text-slate-300 text-xs">From<input type="date" value={downloadFrom} onChange={(e) => setDownloadFrom(e.target.value)} className="ml-2 rounded-lg border border-white/[.1] bg-slate-900/80 px-2 py-1 text-sm text-slate-100" /></label><label className="text-slate-300 text-xs">To<input type="date" value={downloadTo} onChange={(e) => setDownloadTo(e.target.value)} className="ml-2 rounded-lg border border-white/[.1] bg-slate-900/80 px-2 py-1 text-sm text-slate-100" /></label></div><Button label={downloading ? "Downloading..." : "Download"} icon={FileText} click={downloadAttendance} /><Button label="Refresh" icon={RefreshCw} click={load} /><Button label="Employees" icon={Users} click={() => setActiveNav("Employees")} /></div></div><div className="mt-5">{cards([["Present", attendance.present], ["Absent", attendance.absent], ["Half day", attendance.halfDay], ["On leave", attendance.leave]])}</div></div>{attendanceLoading ? <Loading /> : attendanceError ? <Failure error={attendanceError} retry={load} /> : <AttendanceRecordTable items={attendanceData} />}</div>;
-    if (activeNav === "Dashboard") return <div className="space-y-5">{intro("Dashboard overview", "HR Operations Dashboard", "A live summary of HR attendance, hiring and people health.")} {cards([["Present", attendance.present], ["Absent", attendance.absent], ["Half day", attendance.halfDay], ["On leave", attendance.leave]])}</div>;
+    if (activeNav === "Attendance") return <div className="space-y-5"><div className={`${glass} rounded-[20px] p-4 sm:rounded-[24px] sm:p-6`}><div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-end md:justify-between"><div className="min-w-0"><p className="text-xs uppercase tracking-[.18em] text-cyan-300">Attendance sheet</p><h2 className="mt-3 break-words text-2xl font-semibold text-white sm:text-3xl">Realtime attendance</h2><p className="mt-2 max-w-3xl break-words text-sm leading-6 text-slate-400">Updated automatically every 30 seconds. Review attendance states and employee records.</p></div><div className="flex shrink-0 flex-wrap items-center gap-3"><div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[.08] bg-slate-950/50 p-3"><label className="text-slate-300 text-xs">From<input type="date" value={downloadFrom} onChange={(e) => setDownloadFrom(e.target.value)} className="ml-2 rounded-lg border border-white/[.1] bg-slate-900/80 px-2 py-1 text-sm text-slate-100" /></label><label className="text-slate-300 text-xs">To<input type="date" value={downloadTo} onChange={(e) => setDownloadTo(e.target.value)} className="ml-2 rounded-lg border border-white/[.1] bg-slate-900/80 px-2 py-1 text-sm text-slate-100" /></label></div><Button label={downloading ? "Downloading..." : "Download"} icon={FileText} click={downloadAttendance} /><Button label="Mark attendance" icon={CalendarCheck2} click={() => markAttendance()} /><Button label="Refresh" icon={RefreshCw} click={load} /><Button label="Employees" icon={Users} click={() => setActiveNav("Employees")} /></div></div><div className="mt-5">{cards([["Present", attendanceStats.present], ["Absent", attendanceStats.absent], ["Half day", attendanceStats.halfDay], ["On leave", attendanceStats.leave]])}</div></div>{attendanceLoading ? <Loading /> : attendanceError ? <Failure error={attendanceError} retry={load} /> : (isSuperHr ? <AttendanceRecordTable items={attendanceData} /> : <div className={`${glass} rounded-[20px] p-6`}><p className="text-sm text-slate-300">Attendance details are visible to Super HR only. The counts below reflect the current attendance state for the selected period.</p><div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">{["Present", "Absent", "Half day", "On leave", "Late"].map((label, index) => <div key={label} className="rounded-2xl border border-white/[.08] bg-slate-950/70 p-4 text-center"><p className="text-xs uppercase tracking-[.16em] text-slate-400">{label}</p><p className="mt-3 text-3xl font-semibold text-white">{label === "Present" ? attendanceStats.present : label === "Absent" ? attendanceStats.absent : label === "Half day" ? attendanceStats.halfDay : label === "On leave" ? attendanceStats.leave : attendanceStats.late}</p></div>)} </div></div>)} </div>;
+    if (activeNav === "Dashboard") return <div className="space-y-5">{intro("Dashboard overview", "HR Operations Dashboard", "A live summary of HR attendance, hiring and people health.")} {cards([["Present", attendanceStats.present], ["Absent", attendanceStats.absent], ["Half day", attendanceStats.halfDay], ["On leave", attendanceStats.leave]])}</div>;
     if (activeNav === "Departments") return <div className="space-y-5">{intro("Departments", "Team structures", "Review department coverage, active headcount and team health.")}<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{departments.map(dept => <div key={dept} className="rounded-3xl border border-white/[.08] bg-slate-950/50 p-5"><p className="text-sm uppercase tracking-[.18em] text-slate-400">{dept}</p><p className="mt-3 text-3xl font-semibold text-white">{employees.filter(x => x.department === dept).length}</p></div>)}</div></div>;
     const map: Record<Exclude<Section, "Dashboard" | "Employees" | "Attendance" | "Departments">, [string, string, string]> = { Payroll: ["Payroll", "Payroll overview", "Summary of salary costs and pending payroll actions."], Leave: ["Leave management", "Leave overview", "Track leave counts and absence trends across your teams."], Performance: ["Performance", "Team performance", "Review calls, conversions and attendance-driven output."], Documents: ["Documents", "Documents hub", "Upload and manage HR documents for employees and teams."], Recruitment: ["Recruitment", "Hiring pipeline", "Track open roles, candidate progress, and HR hiring workflows."] };
     const [a, b, c] = map[activeNav as keyof typeof map]; return intro(a, b, c);
@@ -158,3 +206,4 @@ function Stat({ name, value }: { name: string; value: string | number }) { retur
 function Loading() { return <div className="space-y-4 p-6">{Array.from({ length: 7 }, (_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-white/[.05]" />)}</div>; }
 function Empty() { return <div className="grid min-h-[300px] place-items-center p-8 text-center"><div><Users className="mx-auto h-10 w-10 text-cyan-300" /><h2 className="mt-4 text-xl font-semibold text-white">No Employees</h2><p className="mt-2 text-sm text-slate-400">Add your first employee to create your HR workspace.</p></div></div>; }
 function Failure({ error, retry }: { error: string; retry: () => void }) { return <div className="grid min-h-[300px] place-items-center p-8 text-center"><div><CircleAlert className="mx-auto h-9 w-9 text-rose-300" /><h2 className="mt-4 text-lg font-semibold text-white">Unable to load HRMS</h2><p className="mt-2 text-sm text-slate-400">{error}</p><button onClick={retry} className="mt-5 rounded-xl bg-white/10 px-4 py-2 text-sm">Retry</button></div></div>; }
+

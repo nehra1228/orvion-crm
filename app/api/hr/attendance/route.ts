@@ -32,6 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const isSuperHr = user.role === "SUPER_ADMIN";
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
@@ -64,14 +65,14 @@ export async function GET(request: Request) {
     orderBy: [{ userId: "asc" }, { day: "asc" }],
   });
 
-  const recordsByUser = new Map<string, Record<string, any>>();
+  const recordsByUser = new Map<string, (typeof attendanceRecords)[number]>();
   attendanceRecords.forEach((record) => {
     const key = `${record.userId}:${record.day}`;
     recordsByUser.set(key, record);
   });
 
   const days: string[] = [];
-  let current = new Date(from);
+  const current = new Date(from);
   const endDate = new Date(to);
   while (current <= endDate) {
     const year = current.getUTCFullYear();
@@ -97,16 +98,32 @@ export async function GET(request: Request) {
     })
   );
 
+  const counts = {
+    present: items.filter((item) => item.status === "PRESENT").length,
+    absent: items.filter((item) => item.status === "ABSENT").length,
+    halfDay: items.filter((item) => item.status === "HALF_DAY").length,
+    leave: items.filter((item) => item.status === "ON_LEAVE").length,
+    late: items.filter((item) => item.status === "LATE").length,
+    total: items.length,
+  };
+
   const format = url.searchParams.get("format");
   if (format === "csv") {
+    if (!isSuperHr) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const headers = ["day", "employeeId", "name", "email", "department", "role", "status", "createdAt"];
-    const escape = (s: any) => {
+    const escape = (s: unknown) => {
       if (s === undefined || s === null) return "";
       const str = String(s);
       return `"${str.replace(/"/g, '""')}"`;
     };
     const rows = [headers.join(",")].concat(
-      items.map((it) => headers.map((h) => escape((it as any)[h])).join(","))
+      items.map((it) => {
+        const record = it as Record<string, string | undefined>;
+        return headers.map((h) => escape(record[h])).join(",");
+      })
     );
     const csv = rows.join("\n");
     return new NextResponse(csv, {
@@ -117,5 +134,9 @@ export async function GET(request: Request) {
     });
   }
 
-  return NextResponse.json({ items });
+  if (!isSuperHr) {
+    return NextResponse.json({ counts, items: [] });
+  }
+
+  return NextResponse.json({ counts, items });
 }
