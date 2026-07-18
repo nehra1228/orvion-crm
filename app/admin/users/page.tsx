@@ -46,7 +46,7 @@ function initials(name?: string | null) {
 }
 function title(value?: string | null) { return value ? value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase()) : "—"; }
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
+  const response = await fetch(url, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...init?.headers } });
   const body = await response.json().catch(() => null);
   if (!response.ok) throw new Error(body?.error?.message || body?.message || "Request failed.");
   return body?.data ?? body;
@@ -107,10 +107,16 @@ export default function UserManagementPage() {
     ["Booked Leads", totals.booked, "Conversion result", Check],
   ];
   const action = async (id: string, endpoint: string, body?: unknown) => {
-    try { await api(`/api/users/${id}/${endpoint}`, { method: "POST", body: body ? JSON.stringify(body) : undefined }); setNotice("Executive updated successfully."); await load(); }
-    catch (reason) { setNotice(reason instanceof Error ? reason.message : "This operation is not enabled by the current API."); }
+    try {
+      const payload = endpoint === "status" ? { active: (body as any)?.status === "ACTIVE" } : body;
+      await api(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(payload ?? {}) });
+      setNotice("Executive updated successfully.");
+      await load();
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : "This operation is not enabled by the current API.");
+    }
   };
-  const remove = async (id: string) => { if (!window.confirm("Delete this executive permanently?")) return; try { await api(`/api/users/${id}`, { method: "DELETE" }); setDrawer(null); setNotice("Executive deleted."); load(); } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Could not delete executive."); } };
+  const remove = async (id: string) => { if (!window.confirm("Delete this executive permanently?")) return; try { await api(`/api/admin/users/${id}`, { method: "DELETE" }); setDrawer(null); setNotice("Executive deleted."); load(); } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Could not delete executive."); } };
   const exportUsers = () => { const q = new URLSearchParams(); if (search) q.set("search", search); if (role) q.set("role", role); if (status) q.set("status", status); window.location.assign(`/api/users/export?${q}`); };
   const toggle = (id: string) => setSelected((ids) => ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]);
   return <DashboardLayout><main className="min-h-screen bg-[#070b16] px-4 py-5 text-slate-100 sm:px-6 lg:px-8"><div className="mx-auto max-w-[1800px] space-y-5">
