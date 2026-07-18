@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth/session";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  await requireUser("ADMIN");
+  const current = await getCurrentUser();
+  if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId } = await params;
   const body = await request.json();
@@ -29,7 +31,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  await requireUser("ADMIN");
+  const current = await getCurrentUser();
+  if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId } = await params;
 
