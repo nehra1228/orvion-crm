@@ -8,7 +8,7 @@ export async function DELETE(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (user.role !== "ADMIN") {
+    if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"].includes(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -22,7 +22,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ success: true, deleted: result.count });
   } catch (error) {
-    console.error("Bulk delete leads error:", error);
-    return NextResponse.json({ error: "Failed to delete selected leads" }, { status: 500 });
+    console.error("Bulk delete leads error:", error?.stack || error?.message || error);
+    return NextResponse.json({ error: "Failed to delete selected leads", detail: (error as any)?.message || String(error) }, { status: 500 });
   }
 }
