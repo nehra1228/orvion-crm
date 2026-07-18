@@ -22,7 +22,8 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ success: true, deleted: result.count });
   } catch (error) {
-    console.error("Bulk delete leads error:", error?.stack || error?.message || error);
-    return NextResponse.json({ error: "Failed to delete selected leads", detail: (error as any)?.message || String(error) }, { status: 500 });
+    const e = error as any;
+    console.error("Bulk delete leads error:", e?.stack || e?.message || e);
+    return NextResponse.json({ error: "Failed to delete selected leads", detail: e?.message || String(e) }, { status: 500 });
   }
 }
