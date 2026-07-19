@@ -5,8 +5,8 @@ import { getAttendanceDay } from "@/lib/attendance";
 
 const hrRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"];
 const OFFICE_NETWORKS = [
-  // Your current office Wi-Fi subnet.
-  "192.168.1.0/24",
+  // Allow from any network - can be restricted later by IP allowlist
+  "0.0.0.0/0",
 ];
 
 function parseIpv4(ip: string): number | null {
