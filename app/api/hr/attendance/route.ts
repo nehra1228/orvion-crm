@@ -134,9 +134,5 @@ export async function GET(request: Request) {
     });
   }
 
-  if (!isSuperHr) {
-    return NextResponse.json({ counts, items: [] });
-  }
-
   return NextResponse.json({ counts, items });
 }
