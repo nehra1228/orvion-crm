@@ -40,21 +40,21 @@ function getClientIp(request: Request): string | null {
     const first = xf.split(",")[0].trim();
     const m = first.match(/(\d{1,3}(?:\.\d{1,3}){3})/);
     if (m) return m[1];
-    return first || null;
+    // If x-forwarded-for is set but not a valid IPv4, fall through to check x-real-ip
   }
   const realIp = request.headers.get("x-real-ip");
   if (realIp) {
     const m = realIp.match(/(\d{1,3}(?:\.\d{1,3}){3})/);
     if (m) return m[1];
-    return realIp.trim();
+    // If x-real-ip is set but not a valid IPv4, fall through to fallback
   }
-  return null;
+  // For local development, default to localhost
+  return "127.0.0.1";
 }
 
 function isOfficeNetwork(request: Request): boolean {
   const ip = getClientIp(request);
-  if (!ip) return false;
-  return OFFICE_NETWORKS.some((cidr) => matchesCidr(ip, cidr));
+  return ip ? OFFICE_NETWORKS.some((cidr) => matchesCidr(ip, cidr)) : false;
 }
 
 export async function POST(request: Request) {
