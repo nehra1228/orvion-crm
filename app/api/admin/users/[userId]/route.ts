@@ -8,7 +8,7 @@ export async function PATCH(
 ) {
   const current = await getCurrentUser();
   if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId } = await params;
   const body = await request.json();
@@ -33,7 +33,7 @@ export async function DELETE(
 ) {
   const current = await getCurrentUser();
   if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId } = await params;
 

@@ -17,7 +17,8 @@ export default function UploadLeadsPage() {
     fetch("/api/admin/users", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
-        const execs = (data || []).filter((u: any) => u.role === "EXECUTIVE").map((u: any) => ({ id: u.id, username: u.username }));
+        const users = Array.isArray(data) ? data : [];
+        const execs = users.filter((user): user is { id: string; username: string; role?: string } => typeof user === "object" && user !== null && (user as { role?: unknown }).role === "EXECUTIVE").map((user) => ({ id: (user as { id: string }).id, username: (user as { username: string }).username }));
         setExecutives(execs);
         if (execs.length === 1) setAssignedTo(execs[0].id);
       })
@@ -42,6 +43,7 @@ export default function UploadLeadsPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("assignmentMode", doNotAutoAssign ? "UNASSIGNED" : "AUTO");
       if (assignedTo) formData.append("assignedToId", assignedTo);
       if (doNotAutoAssign) formData.append("doNotAutoAssign", "true");
 
@@ -60,7 +62,7 @@ export default function UploadLeadsPage() {
         setFileName("");
         fileInput.value = "";
       }
-    } catch (error) {
+    } catch {
       setStatus("Upload failed. Please try again.");
     } finally {
       setLoading(false);
@@ -121,7 +123,10 @@ export default function UploadLeadsPage() {
                   </div>
 
                   <div className="mt-3">
-                    <label className="mb-2 block text-sm font-medium text-slate-300">Assign to Executive (optional)</label>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <label className="text-sm font-medium text-slate-300">Assign to Executive (optional)</label>
+                      <span className="rounded-full bg-amber-500/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">Premium</span>
+                    </div>
                     <select
                       value={assignedTo}
                       onChange={(e) => setAssignedTo(e.target.value)}
@@ -132,6 +137,7 @@ export default function UploadLeadsPage() {
                         <option key={ex.id} value={ex.id}>{ex.username}</option>
                       ))}
                     </select>
+                    <p className="mt-2 text-sm text-slate-500">Selecting an executive overrides automatic lead assignment for this upload.</p>
                   </div>
 
                   <div className="mt-4 flex items-start gap-3">

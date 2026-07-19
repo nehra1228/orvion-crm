@@ -3,7 +3,7 @@
 };
 
 export default function RoleBadge({ role }: Props) {
-  const isAdmin = role === "SUPER_ADMIN" || role === "COMPANY_ADMIN";
+  const isAdmin = role === "SUPER_ADMIN" || role === "SUPER_HR" || role === "COMPANY_ADMIN";
   const isExecutive = role === "EXECUTIVE";
 
   const badgeLabel = isAdmin ? "ADMIN" : isExecutive ? "EXECUTIVE" : role;

@@ -29,7 +29,7 @@ type PageData = {
 };
 const empty: PageData = { items: [], total: 0, page: 1, pageSize: 10, totalPages: 1 };
 const glass = "border border-white/[.09] bg-slate-900/55 shadow-[0_20px_70px_-32px_rgba(0,0,0,.95)] backdrop-blur-xl";
-const roles = ["SUPER_ADMIN", "ADMIN", "MANAGER", "EXECUTIVE", "VIEWER"];
+const roles = ["SUPER_ADMIN", "SUPER_HR", "ADMIN", "MANAGER", "EXECUTIVE", "VIEWER"];
 const presenceOrder: Presence[] = ["ONLINE", "ON_CALL", "IDLE", "BREAK", "OFFLINE"];
 
 function date(value?: string | null, time = false) {

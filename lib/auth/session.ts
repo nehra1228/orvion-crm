@@ -56,7 +56,8 @@ export async function requireUser(role: "ADMIN" | "EXECUTIVE") {
     user.role === "ADMIN" ||
     user.role === "SUPER_ADMIN" ||
     user.role === "COMPANY_ADMIN" ||
-    user.role === "HR";
+    user.role === "HR" ||
+    user.role === "SUPER_HR";
 
   if (role === "EXECUTIVE") {
     if (isExecutive) {

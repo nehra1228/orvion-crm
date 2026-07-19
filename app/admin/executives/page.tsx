@@ -44,11 +44,7 @@ export default function ExecutivesPage() {
 
       const data = await res.json();
 
-      setExecutives(
-        Array.isArray(data)
-          ? data.filter((user: any) => user.role === "EXECUTIVE")
-          : []
-      );
+      setExecutives(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
       setExecutives([]);
@@ -171,11 +167,11 @@ export default function ExecutivesPage() {
             </p>
 
             <h1 className="mt-2 break-words text-2xl font-bold text-white sm:text-3xl lg:text-4xl">
-              Executive Management
+              User Management
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
-              Manage executives, monitor workload and assign leads.
+              Manage users, monitor workload and assign leads.
             </p>
           </div>
 
@@ -184,13 +180,13 @@ export default function ExecutivesPage() {
             className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 sm:w-auto sm:px-5"
           >
             <UserPlus size={18} />
-            Add Executive
+            Add User
           </button>
         </header>
 
         <section className="grid grid-cols-1 gap-4 min-[460px]:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           <StatCard
-            label="Total Executives"
+            label="Total Users"
             value={executives.length}
             icon={<Users size={30} className="text-cyan-400 sm:h-[34px] sm:w-[34px]" />}
           />
@@ -210,7 +206,7 @@ export default function ExecutivesPage() {
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-[#111827] p-4 sm:p-5">
-          <div className="relative w-full max-w-md">
+              <div className="relative w-full max-w-md">
             <Search
               size={18}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
@@ -219,7 +215,7 @@ export default function ExecutivesPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search executive..."
+              placeholder="Search user..."
               className="w-full rounded-xl border border-white/10 bg-[#0B1220] py-3 pl-11 pr-4 text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-500"
             />
           </div>

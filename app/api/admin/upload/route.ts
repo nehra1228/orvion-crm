@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { LeadRemark, LeadStatus } from "@prisma/client";
 import * as XLSX from "xlsx";
 
-async function parseFile(file: File) {
+async function parseFile(file: File): Promise<unknown[]> {
   const buffer = await file.arrayBuffer();
   const extension = file.name.split('.').pop()?.toLowerCase();
 
@@ -21,18 +21,19 @@ async function parseFile(file: File) {
   return XLSX.utils.sheet_to_json(sheet, { defval: '' });
 }
 
-function normalizeRow(row: any) {
+function normalizeRow(row: unknown) {
+  const record = typeof row === 'object' && row !== null ? row as Record<string, unknown> : {};
   return {
-    name: String(row.Name || row.name || row.FullName || row.fullName || '').trim(),
-    mobile: String(row.Mobile || row.mobile || row.Phone || row.phone || '').trim(),
-    project: row.Project || row.project || null,
-    city: row.City || row.city || null,
-    source: row.Source || row.source || null,
-    status: row.Status || row.status || 'NEW',
-    remark: row.Remark || row.remark || null,
-    notes: row.Notes || row.notes || null,
-    followUpDate: row.FollowUpDate || row.followUpDate || null,
-    assignedToUsername: row.AssignedTo || row.assignedTo || null,
+    name: String(record.Name || record.name || record.FullName || record.fullName || '').trim(),
+    mobile: String(record.Mobile || record.mobile || record.Phone || record.phone || '').trim(),
+    project: String(record.Project || record.project || '').trim() || null,
+    city: String(record.City || record.city || '').trim() || null,
+    source: String(record.Source || record.source || '').trim() || null,
+    status: String(record.Status || record.status || 'NEW').trim(),
+    remark: String(record.Remark || record.remark || '').trim() || null,
+    notes: String(record.Notes || record.notes || '').trim() || null,
+    followUpDate: record.FollowUpDate || record.followUpDate || null,
+    assignedToUsername: String(record.AssignedTo || record.assignedTo || '').trim() || null,
   };
 }
 
@@ -105,7 +106,9 @@ function parseRemark(remark: string) {
 export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get('file');
-  const manualAssignedToId = formData.get('assignedToId') as string | null;
+  const manualAssignedToId = String(formData.get('assignedToId') || '').trim() || null;
+  const manualTeamId = String(formData.get('teamId') || '').trim() || null;
+  const assignmentMode = String(formData.get('assignmentMode') || 'AUTO').trim().toUpperCase();
   const doNotAutoAssign = formData.get('doNotAutoAssign') === 'true';
 
   if (!file || !(file instanceof File)) {
@@ -153,12 +156,12 @@ export async function POST(request: Request) {
     }
 
     // collect usernames referenced in file for lookup
-    const usernames = Array.from(new Set(deduped.map((r) => (r.assignedToUsername || '')).filter(Boolean)));
+      const usernames = Array.from(new Set(deduped.map((r) => String(r.assignedToUsername || '').trim().toLowerCase()).filter(Boolean)));
     let usernameToId: Record<string, string> = {};
 
     if (usernames.length > 0) {
       const users = await prisma.user.findMany({ where: { username: { in: usernames } } });
-      usernameToId = users.reduce((acc, u) => ({ ...acc, [u.username]: u.id }), {});
+      usernameToId = users.reduce((acc, u) => ({ ...acc, [String(u.username).trim().toLowerCase()]: u.id }), {});
     }
 
     const activeExecs = await prisma.user.findMany({ where: { role: "EXECUTIVE", active: true }, orderBy: [{ username: "asc" }] });
@@ -167,9 +170,11 @@ export async function POST(request: Request) {
     const leads = deduped
       .filter((row): row is typeof row & { normalizedMobile: string } => Boolean(row.normalizedMobile))
       .map((row, index) => {
-        const assignedFromFile = row.assignedToUsername ? usernameToId[row.assignedToUsername] : null;
-        const autoAssignedId = !doNotAutoAssign && activeExecIds.length ? activeExecIds[index % activeExecIds.length] : null;
-        const assignedToId = manualAssignedToId || assignedFromFile || autoAssignedId;
+        const assignedFromFile = row.assignedToUsername ? usernameToId[String(row.assignedToUsername).trim().toLowerCase()] : null;
+        const explicitAssignedId = manualAssignedToId || assignedFromFile;
+        const autoAssignedId = !doNotAutoAssign && activeExecIds.length && assignmentMode !== "TEAM" ? activeExecIds[index % activeExecIds.length] : null;
+        const assignedToId = assignmentMode === "TEAM" || assignmentMode === "UNASSIGNED" ? null : explicitAssignedId || autoAssignedId;
+        const teamId = assignmentMode === "TEAM" ? manualTeamId : null;
 
         return {
           name: row.name,
@@ -177,17 +182,28 @@ export async function POST(request: Request) {
           project: row.project || null,
           city: row.city || null,
           source: row.source || null,
-          status: parseStatus(row.status) as LeadStatus,
-          remark: parseRemark(row.remark) as LeadRemark | null,
+          status: parseStatus(String(row.status || '')) as LeadStatus,
+          remark: parseRemark(String(row.remark || '')) as LeadRemark | null,
           notes: row.notes || null,
-          followUpDate: row.followUpDate ? new Date(row.followUpDate) : null,
+          followUpDate: row.followUpDate ? new Date(String(row.followUpDate)) : null,
+          teamId,
           assignedToId,
         };
       });
 
     const created = await Promise.all(leads.map((lead) => prisma.lead.create({ data: lead })));
+    const assignedCount = created.filter((lead) => Boolean(lead.assignedToId || lead.teamId)).length;
 
-    return NextResponse.json({ parsed: rows.length, valid: valid.length, deduped: deduped.length, invalidMobileCount, filteredDuplicatePhone, filteredDuplicateName, created: created.length });
+    return NextResponse.json({
+      parsed: rows.length,
+      valid: valid.length,
+      deduped: deduped.length,
+      invalidMobileCount,
+      filteredDuplicatePhone,
+      filteredDuplicateName,
+      created: created.length,
+      assigned: assignedCount,
+    });
   } catch (error) {
     return NextResponse.json({ message: 'Failed to import leads.', error: String(error) }, { status: 500 });
   }

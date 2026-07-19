@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { computeAttendanceFromState } from "@/lib/attendance";
 import { getCurrentUser } from "@/lib/auth/session";
 
-const hrRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"];
+const hrRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"];
 
 function normalizedRole(role: string) {
   const mapping: Record<string, string> = {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
   const where: any = {
     AND: [
-      { role: { notIn: ["SUPER_ADMIN", "COMPANY_ADMIN", "ADMIN"] } },
+      { role: { notIn: ["SUPER_ADMIN", "COMPANY_ADMIN", "ADMIN", "SUPER_HR"] } },
       { active: true },
     ],
   };

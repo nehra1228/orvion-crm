@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   // HR may create executives and teams but must not create admin-level users
-  const adminRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN"];
+  const adminRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "SUPER_HR"];
   if (creator.role !== "HR" && !adminRoles.includes(creator.role) && creator.role !== "COMPANY_ADMIN") {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }

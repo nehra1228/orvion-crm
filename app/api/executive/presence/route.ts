@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAttendanceDay } from "@/lib/attendance";
 import { getCurrentUser } from "@/lib/auth/session";
 
-const adminRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"];
+const adminRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"];
 function isAdminRole(role: string) {
   return adminRoles.includes(role);
 }

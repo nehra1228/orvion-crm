@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 
-const hrRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"];
+const hrRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"];
 
 function normalizedRole(role: string) {
   const mapping: Record<string, string> = {
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const isSuperHr = user.role === "SUPER_ADMIN";
+  const isSuperHr = user.role === "SUPER_ADMIN" || user.role === "SUPER_HR";
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   const users = await prisma.user.findMany({
     where: {
       active: true,
-      role: { notIn: ["SUPER_ADMIN", "COMPANY_ADMIN", "ADMIN"] },
+      role: { notIn: ["SUPER_ADMIN", "COMPANY_ADMIN", "ADMIN", "SUPER_HR"] },
       ...(userIds ? { id: { in: userIds } } : {}),
     },
     include: {

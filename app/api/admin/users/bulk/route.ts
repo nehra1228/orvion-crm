@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const current = await getCurrentUser();
     if (!current) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"].includes(current.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json().catch(() => ({} as any));
     const action = body?.action as string | undefined;
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "deactivate") {
       const result = await prisma.user.updateMany({
-        where: { id: { in: userIds }, role: { notIn: ["SUPER_ADMIN", "COMPANY_ADMIN"] } },
+        where: { id: { in: userIds }, role: { notIn: ["SUPER_ADMIN", "COMPANY_ADMIN", "SUPER_HR"] } },
         data: { active: false },
       });
       return NextResponse.json({ success: true, count: result.count });
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
           failed.push({ id, reason: "Not found" });
           continue;
         }
-        if (["SUPER_ADMIN", "COMPANY_ADMIN"].includes(user.role)) {
+        if (["SUPER_ADMIN", "COMPANY_ADMIN", "SUPER_HR"].includes(user.role)) {
           failed.push({ id, reason: "Cannot delete admin user" });
           continue;
         }

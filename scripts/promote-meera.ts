@@ -9,7 +9,7 @@ async function main() {
   }
   const updated = await prisma.user.update({
     where: { id: user.id },
-    data: { role: "SUPER_ADMIN", active: true },
+    data: { role: "SUPER_HR", active: true },
   });
   console.log("Updated user:", updated);
 }

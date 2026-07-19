@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Allow HR and admin roles to create teams
-    const allowed = ["HR", "ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN"];
+    const allowed = ["HR", "ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "SUPER_HR"];
     if (!allowed.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();

@@ -34,7 +34,7 @@ export default function Navbar({ title, subtitle }: NavbarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [username, setUsername] = useState("Administrator");
   const [userRole, setUserRole] = useState<string>("");
   const pathSegments = pathname?.split("/").filter(Boolean) ?? [];

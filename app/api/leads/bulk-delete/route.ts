@@ -8,7 +8,7 @@ export async function DELETE(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR"].includes(user.role)) {
+    if (!["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"].includes(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

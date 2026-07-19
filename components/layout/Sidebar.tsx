@@ -16,6 +16,7 @@ const navigation = [
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Leads", href: "/admin/leads", icon: CircleDot },
   { label: "Calling CRM", href: "/admin/calling", icon: Headphones },
+  { label: "HR", href: "/admin/hr", icon: UsersRound },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
   { label: "Activity", href: "/admin/activity", icon: Activity },
   { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -27,10 +28,23 @@ export default function Sidebar() {
   const reducedMotion = useReducedMotion();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [username, setUsername] = useState("Administrator");
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
     const saved = window.localStorage.getItem("orvion-login-username");
     if (saved) setUsername(saved);
+
+    (async () => {
+      try {
+        const res = await fetch("/api/users/me");
+        if (!res.ok) return;
+        const body = await res.json().catch(() => null);
+        setUserRole(body?.user?.role || "");
+      } catch {
+        setUserRole("");
+      }
+    })();
+
     const toggle = () => setMobileOpen((current) => !current);
     window.addEventListener("orvion:toggle-navigation", toggle);
     return () => window.removeEventListener("orvion:toggle-navigation", toggle);
@@ -39,6 +53,13 @@ export default function Sidebar() {
   const navigate = (href: string) => { setMobileOpen(false); router.push(href); };
   const signOut = () => { window.localStorage.removeItem("orvion-login-username"); router.push("/login"); };
   const activePath = pathname ?? "";
+  const showOnlyHR = userRole === "HR" && activePath.startsWith("/admin/hr");
+  const visibleNavigation = showOnlyHR
+    ? navigation.filter((item) => item.href === "/admin/hr")
+    : userRole === "SUPER_HR"
+      ? navigation.filter((item) => item.href !== "/admin/reports")
+      : navigation;
+
   const body = <div className="flex h-full flex-col">
     <div className="p-2">
       <div className="relative overflow-hidden rounded-2xl border border-cyan-300/[0.15] bg-gradient-to-br from-blue-500/[0.17] via-slate-950/50 to-cyan-400/[0.08] p-4 shadow-[0_14px_45px_rgba(0,0,0,.2)]">
@@ -50,8 +71,11 @@ export default function Sidebar() {
         <div className="relative mt-4 flex items-center gap-2 border-t border-white/[0.08] pt-3 text-[10px] font-medium text-emerald-200"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-70" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" /></span>All systems operational</div>
       </div>
     </div>
-    <div className="mt-4 flex-1 px-2"><p className="px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Workspace</p><nav className="mt-2 space-y-1" aria-label="Main navigation">{navigation.map(({ label, href, icon: Icon }) => {
+    <div className="mt-4 flex-1 px-2"><p className="px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Workspace</p><nav className="mt-2 space-y-1" aria-label="Main navigation">{visibleNavigation.map(({ label, href, icon: Icon }) => {
       const active = activePath === href || (href !== "/admin/dashboard" && activePath.startsWith(`${href}/`));
+      // Only show HR page to HR and SUPER_HR roles
+      if (href === "/admin/hr" && !(userRole === "HR" || userRole === "SUPER_HR")) return null;
+
       return <button onClick={() => navigate(href)} key={href} className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-left text-sm transition focus:outline-none focus:ring-2 focus:ring-cyan-300/45 ${active ? "font-semibold text-white" : "text-slate-400 hover:bg-white/[0.055] hover:text-slate-100"}`} aria-current={active ? "page" : undefined}>
         {active && <motion.span layoutId="orvion-sidebar-active" className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-600/45 via-cyan-500/25 to-transparent shadow-[0_0_26px_rgba(34,211,238,.12)]" transition={{ type: "spring", stiffness: 360, damping: 31 }} />}
         <span className={`relative flex h-7 w-7 items-center justify-center rounded-lg transition duration-200 ${active ? "bg-cyan-300/15 text-cyan-100" : "bg-transparent text-slate-500 group-hover:bg-white/[0.07] group-hover:text-cyan-200"}`}><Icon className="h-4 w-4 transition duration-200 group-hover:scale-110 group-hover:-rotate-3" /></span><span className="relative flex-1">{label}</span>{active ? <motion.span initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} className="relative h-1.5 w-1.5 rounded-full bg-cyan-200 shadow-[0_0_10px_#67e8f9]" /> : <ChevronRight className="relative h-3.5 w-3.5 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-60" />}

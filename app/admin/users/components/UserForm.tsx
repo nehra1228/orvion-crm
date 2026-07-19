@@ -93,6 +93,7 @@ export default function UserForm() {
         <label className="text-sm text-slate-400">Role</label>
         <select value={role} onChange={(e) => setRole(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none">
           <option value="SUPER_ADMIN">Super Admin</option>
+          <option value="SUPER_HR">Super HR</option>
           <option value="COMPANY_ADMIN">Company Admin</option>
           <option value="BRANCH_MANAGER">Branch Manager</option>
           <option value="DEPARTMENT_MANAGER">Department Manager</option>
