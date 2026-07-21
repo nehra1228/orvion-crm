@@ -14,14 +14,17 @@ export async function DELETE(req: Request) {
 
     const body = await req.json().catch(() => ({} as any));
     const leadIds = Array.isArray(body?.leadIds) ? body.leadIds.filter((id: unknown) => typeof id === "string") : [];
+    const remark = typeof body?.remark === "string" ? body.remark.trim().toUpperCase() : "";
     const all = Boolean(body?.all);
 
-    if (!leadIds.length && !all) {
+    if (!leadIds.length && !all && !remark) {
       return NextResponse.json({ error: "No leads selected" }, { status: 400 });
     }
 
     // Build where clause — if `all` is true, scope deletion by user role.
     let where: any = {};
+    const protectedCondition = { status: { not: "INTERESTED" } };
+
     if (all) {
       if (user.role === "EXECUTIVE") {
         where.assignedToId = user.id;
@@ -31,8 +34,14 @@ export async function DELETE(req: Request) {
         // ADMIN-like roles may delete all leads
         where = {};
       }
+    } else if (remark) {
+      where.remark = remark;
     } else {
       where = { id: { in: leadIds } };
+    }
+
+    if (typeof where === "object") {
+      where = { ...where, ...protectedCondition };
     }
 
     const result = await prisma.lead.deleteMany({ where });

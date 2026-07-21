@@ -33,6 +33,7 @@ export async function getCurrentUser() {
     return {
       id: user.id,
       username: user.username,
+      fullName: user.fullName || null,
       role: user.role,
       active: user.active,
       companyId: user.companyId,

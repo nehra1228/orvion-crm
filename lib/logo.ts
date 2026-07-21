@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const uploadsDir = path.join(process.cwd(), "uploads");
+const uploadsDir = path.join(process.cwd(), "public", "uploads");
 const logoMetaPath = path.join(uploadsDir, "logo.json");
 
 export async function getCurrentLogo() {

@@ -15,6 +15,7 @@ const navigation = [
   { label: "Teams", href: "/admin/teams", icon: UsersRound },
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Leads", href: "/admin/leads", icon: CircleDot },
+  { label: "Executive Workspace", href: "/admin/executives", icon: BarChart3 },
   { label: "Calling CRM", href: "/admin/calling", icon: Headphones },
   { label: "HR", href: "/admin/hr", icon: UsersRound },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },

@@ -17,7 +17,7 @@ export async function DELETE(
   }
 
   try {
-    const result = await prisma.lead.deleteMany({ where: { assignedToId: userId } });
+    const result = await prisma.lead.deleteMany({ where: { assignedToId: userId, status: { not: "INTERESTED" } } });
     return NextResponse.json({ deleted: result.count });
   } catch (err: any) {
     console.error("/api/admin/users/[userId]/leads DELETE error:", err);

@@ -42,6 +42,8 @@ const [rotation, setRotation] = useState({
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
+        credentials: "include",
+        mode: "same-origin",
         headers: {
           "Content-Type": "application/json",
         },

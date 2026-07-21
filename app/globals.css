@@ -277,3 +277,31 @@ html.dark .hover\:bg-cyan-500:hover {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Executive workspace: preserve the premium lead-card experience beyond mobile.
+   The spreadsheet remains data-compatible but never forces a laptop viewport wider. */
+@media (min-width: 768px) {
+  div.md\:hidden:has(+ div.hidden > table.min-w-\[1050px\]) {
+    display: grid !important;
+  }
+
+  div.hidden:has(> table.min-w-\[1050px\]) {
+    display: none !important;
+  }
+}
+
+/* Executive Flight Deck visual refinement */
+main:has(.bg-\[\#040814\]) {
+  background-image:
+    radial-gradient(circle at 8% 10%, rgba(34, 211, 238, 0.10), transparent 28%),
+    radial-gradient(circle at 92% 82%, rgba(99, 102, 241, 0.12), transparent 30%),
+    linear-gradient(135deg, #030712 0%, #071124 52%, #040712 100%) !important;
+}
+
+main:has(.bg-\[\#040814\]) [class*="backdrop-blur"] {
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+main:has(table.min-w-\[1050px\]) {
+  overflow-x: clip;
+}

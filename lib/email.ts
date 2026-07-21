@@ -1,8 +1,8 @@
 const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
 const SMTP_PORT = Number(process.env.SMTP_PORT || "465");
-const SMTP_USER = process.env.SMTP_USER || "orviongroup@gmail.com";
+const SMTP_USER = process.env.SMTP_USER || "orviongroupofficial@gmail.com";
 const SMTP_PASS = process.env.SMTP_PASS;
-const EMAIL_FROM = process.env.EMAIL_FROM || "orviongroup@gmail.com";
+const EMAIL_FROM = process.env.EMAIL_FROM || "orviongroupofficial@gmail.com";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
 
 async function getTransporter() {

@@ -3,208 +3,97 @@ import { prisma } from "@/lib/prisma";
 import { LeadRemark, LeadStatus } from "@prisma/client";
 import * as XLSX from "xlsx";
 
-async function parseFile(file: File): Promise<unknown[]> {
-  const buffer = await file.arrayBuffer();
-  const extension = file.name.split('.').pop()?.toLowerCase();
-
-  if (extension === 'csv') {
-    const text = new TextDecoder().decode(buffer);
-    const workbook = XLSX.read(text, { type: 'string' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    return XLSX.utils.sheet_to_json(sheet, { defval: '' });
-  }
-
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  return XLSX.utils.sheet_to_json(sheet, { defval: '' });
-}
-
-function normalizeRow(row: unknown) {
-  const record = typeof row === 'object' && row !== null ? row as Record<string, unknown> : {};
-  return {
-    name: String(record.Name || record.name || record.FullName || record.fullName || '').trim(),
-    mobile: String(record.Mobile || record.mobile || record.Phone || record.phone || '').trim(),
-    project: String(record.Project || record.project || '').trim() || null,
-    city: String(record.City || record.city || '').trim() || null,
-    source: String(record.Source || record.source || '').trim() || null,
-    status: String(record.Status || record.status || 'NEW').trim(),
-    remark: String(record.Remark || record.remark || '').trim() || null,
-    notes: String(record.Notes || record.notes || '').trim() || null,
-    followUpDate: record.FollowUpDate || record.followUpDate || null,
-    assignedToUsername: String(record.AssignedTo || record.assignedTo || '').trim() || null,
-  };
-}
-
-function normalizeMobile(mobile: string) {
-  const digits = String(mobile || '').replace(/[^\d]/g, '');
-  if (!digits) {
-    return null;
-  }
-
-  if (digits.length === 10) {
-    return digits;
-  }
-
-  if (digits.length === 11 && digits.startsWith('0')) {
-    return digits.slice(1);
-  }
-
-  if (digits.length === 12 && digits.startsWith('91')) {
-    return digits.slice(2);
-  }
-
-  if (digits.length === 13 && digits.startsWith('091')) {
-    return digits.slice(3);
-  }
-
-  if (digits.length === 14 && digits.startsWith('0091')) {
-    return digits.slice(4);
-  }
-
-  return null;
-}
-
-function normalizeName(name: string) {
-  return String(name || '').trim().toLowerCase();
-}
-
-function parseStatus(status: string) {
-  const value = status?.toString()?.trim()?.toUpperCase().replace(/\s+/g, '_');
-  const allowed = [
-    'NEW',
-    'CALLED',
-    'INTERESTED',
-    'FOLLOW_UP',
-    'SITE_VISIT',
-    'NEGOTIATION',
-    'BOOKED',
-    'LOST',
-  ];
-
-  return allowed.includes(value) ? value : 'NEW';
-}
-
-function parseRemark(remark: string) {
-  const value = remark?.toString()?.trim()?.toUpperCase().replace(/\s+/g, '_');
-  const allowed = [
-    'INTERESTED',
-    'NOT_INTERESTED',
-    'BUSY',
-    'SWITCH_OFF',
-    'WRONG_NUMBER',
-    'CALLBACK',
-    'NO_ANSWER',
-    'SITE_VISIT',
-    'BOOKED',
-    'LOST',
-  ];
-  return allowed.includes(value) ? value : null;
-}
+const queueSource: Record<string, string> = { TODAY_LEADS: "Leads", CALLING_DATA: "Calling data", AUTOCALLER: "Autocaller data" };
+const asText = (value: unknown) => String(value ?? "").trim();
+const mobile = (value: string) => { const digits = value.replace(/\D/g, ""); if (digits.length === 10) return digits; if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2); return null; };
+const status = (value: string) => (["NEW", "CALLED", "INTERESTED", "FOLLOW_UP", "SITE_VISIT", "NEGOTIATION", "BOOKED", "LOST"].includes(value) ? value : "NEW") as LeadStatus;
+const remark = (value: string) => (["INTERESTED", "NOT_INTERESTED", "BUSY", "SWITCH_OFF", "WRONG_NUMBER", "CALLBACK", "NO_ANSWER", "SITE_VISIT", "BOOKED", "LOST"].includes(value) ? value : null) as LeadRemark | null;
 
 export async function POST(request: Request) {
-  const formData = await request.formData();
-  const file = formData.get('file');
-  const manualAssignedToId = String(formData.get('assignedToId') || '').trim() || null;
-  const manualTeamId = String(formData.get('teamId') || '').trim() || null;
-  const assignmentMode = String(formData.get('assignmentMode') || 'AUTO').trim().toUpperCase();
-  const doNotAutoAssign = formData.get('doNotAutoAssign') === 'true';
-
-  if (!file || !(file instanceof File)) {
-    return NextResponse.json({ message: 'No file provided.' }, { status: 400 });
-  }
-
+  const form = await request.formData(); const file = form.get("file");
+  if (!(file instanceof File)) return NextResponse.json({ message: "No file provided." }, { status: 400 });
   try {
-    const rows = await parseFile(file);
-
-    const normalized = rows
-      .map(normalizeRow)
-      .map((row) => ({
-        ...row,
-        normalizedMobile: normalizeMobile(row.mobile),
-        normalizedName: normalizeName(row.name),
-      }));
-
-    const valid = normalized.filter((row) => row.name && row.normalizedMobile);
-    const invalidMobileCount = normalized.filter((row) => row.name && !row.normalizedMobile).length;
-
-    const seenPhone = new Set<string>();
-    const seenName = new Set<string>();
-    let filteredDuplicatePhone = 0;
-    let filteredDuplicateName = 0;
-    const deduped = [] as Array<typeof valid[number]>;
-
-    for (const row of valid) {
-      if (!row.normalizedMobile) {
-        continue;
+    const buffer = await file.arrayBuffer(); const book = XLSX.read(buffer, { type: "array" }); const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(book.Sheets[book.SheetNames[0]], { defval: "" });
+    const assignmentMode = asText(form.get("assignmentMode") || "ROUND_ROBIN").toUpperCase();
+    const destinationQueue = asText(form.get("destinationQueue") || form.get("executiveQueue") || "TODAY_LEADS").toUpperCase();
+    let selectedExecutive = asText(form.get("assignedToId") || form.get("executiveId")) || null;
+    const selectedTeam = asText(form.get("teamId")) || null;
+    const source = queueSource[destinationQueue] ?? (asText(form.get("source") || form.get("uploadSource")) || null);
+    const allExecutives = await prisma.user.findMany({ where: { role: "EXECUTIVE", active: true }, orderBy: { username: "asc" }, select: { id: true, teamId: true, username: true } });
+    const eligible = assignmentMode === "TEAM_ROUND_ROBIN" ? allExecutives.filter((user) => user.teamId === selectedTeam) : allExecutives;
+    if (assignmentMode === "TEAM_ROUND_ROBIN" && (!selectedTeam || !eligible.length)) return NextResponse.json({ message: "The selected team has no active executives." }, { status: 400 });
+    // If the client sent a username instead of an id, try to resolve it to an id
+    if (selectedExecutive) {
+      const foundById = allExecutives.find((u) => u.id === selectedExecutive);
+      if (!foundById) {
+        const foundByUsername = allExecutives.find((u) => u.username === selectedExecutive);
+        if (foundByUsername) selectedExecutive = foundByUsername.id;
       }
-
-      if (seenPhone.has(row.normalizedMobile)) {
-        filteredDuplicatePhone += 1;
-        continue;
-      }
-
-      if (seenName.has(row.normalizedName)) {
-        filteredDuplicateName += 1;
-        continue;
-      }
-
-      seenPhone.add(row.normalizedMobile);
-      seenName.add(row.normalizedName);
-      deduped.push(row);
     }
 
-    // collect usernames referenced in file for lookup
-      const usernames = Array.from(new Set(deduped.map((r) => String(r.assignedToUsername || '').trim().toLowerCase()).filter(Boolean)));
-    let usernameToId: Record<string, string> = {};
+    if (assignmentMode === "EXECUTIVE" && !selectedExecutive) return NextResponse.json({ message: "Choose an executive." }, { status: 400 });
 
-    if (usernames.length > 0) {
-      const users = await prisma.user.findMany({ where: { username: { in: usernames } } });
-      usernameToId = users.reduce((acc, u) => ({ ...acc, [String(u.username).trim().toLowerCase()]: u.id }), {});
-    }
+    const seen = new Set<string>();
+    const leadsToCreate: Array<{
+      name: string;
+      mobile: string;
+      project: string | null;
+      city: string | null;
+      source: string | null;
+      status: LeadStatus;
+      remark: LeadRemark | null;
+      notes: string | null;
+      assignedToId: string | null;
+      teamId: string | null;
+    }> = [];
 
-    const activeExecs = await prisma.user.findMany({ where: { role: "EXECUTIVE", active: true }, orderBy: [{ username: "asc" }] });
-    const activeExecIds = activeExecs.map((exec) => exec.id);
+    for (const [index, row] of raw.entries()) {
+      const name = asText(row.Name ?? row.name ?? row.FullName);
+      const normalizedMobile = mobile(asText(row.Mobile ?? row.mobile ?? row.Phone));
+      if (!name || !normalizedMobile || seen.has(normalizedMobile)) continue;
 
-    const leads = deduped
-      .filter((row): row is typeof row & { normalizedMobile: string } => Boolean(row.normalizedMobile))
-      .map((row, index) => {
-        const assignedFromFile = row.assignedToUsername ? usernameToId[String(row.assignedToUsername).trim().toLowerCase()] : null;
-        const explicitAssignedId = manualAssignedToId || assignedFromFile;
-        const autoAssignedId = !doNotAutoAssign && activeExecIds.length && assignmentMode !== "TEAM" ? activeExecIds[index % activeExecIds.length] : null;
-        const assignedToId = assignmentMode === "TEAM" || assignmentMode === "UNASSIGNED" ? null : explicitAssignedId || autoAssignedId;
-        const teamId = assignmentMode === "TEAM" ? manualTeamId : null;
+      seen.add(normalizedMobile);
+      const assignedToId = assignmentMode === "EXECUTIVE"
+        ? selectedExecutive
+        : assignmentMode === "UNASSIGNED"
+          ? null
+          : eligible[index % eligible.length]?.id ?? null;
 
-        return {
-          name: row.name,
-          mobile: row.normalizedMobile,
-          project: row.project || null,
-          city: row.city || null,
-          source: row.source || null,
-          status: parseStatus(String(row.status || '')) as LeadStatus,
-          remark: parseRemark(String(row.remark || '')) as LeadRemark | null,
-          notes: row.notes || null,
-          followUpDate: row.followUpDate ? new Date(String(row.followUpDate)) : null,
-          teamId,
-          assignedToId,
-        };
+      leadsToCreate.push({
+        name,
+        mobile: normalizedMobile,
+        project: asText(row.Project ?? row.project) || null,
+        city: asText(row.City ?? row.city) || null,
+        source,
+        status: status(asText(row.Status ?? row.status ?? "NEW")),
+        remark: remark(asText(row.Remark ?? row.remark)),
+        notes: asText(row.Notes ?? row.notes) || null,
+        assignedToId,
+        teamId: assignmentMode === "TEAM_ROUND_ROBIN" ? selectedTeam : null,
       });
+    }
 
-    const created = await Promise.all(leads.map((lead) => prisma.lead.create({ data: lead })));
-    const assignedCount = created.filter((lead) => Boolean(lead.assignedToId || lead.teamId)).length;
+    let created = 0;
+    const batchSize = 500;
+    for (let i = 0; i < leadsToCreate.length; i += batchSize) {
+      const batch = leadsToCreate.slice(i, i + batchSize);
+      const result = await prisma.lead.createMany({ data: batch, skipDuplicates: true });
+      created += result.count;
+    }
 
-    return NextResponse.json({
-      parsed: rows.length,
-      valid: valid.length,
-      deduped: deduped.length,
-      invalidMobileCount,
-      filteredDuplicatePhone,
-      filteredDuplicateName,
-      created: created.length,
-      assigned: assignedCount,
+    // Return a small sample of recently created leads for easier verification in the client
+    const recentLeads = await prisma.lead.findMany({
+      where: {
+        source: source ?? undefined,
+        assignedToId: assignmentMode === "UNASSIGNED" ? undefined : selectedExecutive ?? undefined,
+      },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(20, Math.max(0, created)),
+      select: { id: true, name: true, mobile: true, source: true, assignedToId: true },
     });
+
+    return NextResponse.json({ created, destinationQueue, source, assigned: assignmentMode === "UNASSIGNED" ? 0 : created, sample: recentLeads });
   } catch (error) {
-    return NextResponse.json({ message: 'Failed to import leads.', error: String(error) }, { status: 500 });
+    return NextResponse.json({ message: "Failed to import leads.", error: String(error) }, { status: 500 });
   }
 }

@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const search = String(searchParams.get("search") || "").trim();
     const status = searchParams.get("status") || undefined;
+    const remark = String(searchParams.get("remark") || "").trim().toUpperCase() || undefined;
     const page = Number(searchParams.get("page") || "1");
     const pageSize = Number(searchParams.get("pageSize") || "10");
 
@@ -27,6 +28,14 @@ export async function GET(req: Request) {
 
     if (status) {
       where.status = status;
+    }
+
+    if (remark) {
+      if (remark === "REMARKED") {
+        where.remark = { not: null };
+      } else {
+        where.remark = remark;
+      }
     }
 
     if (search) {

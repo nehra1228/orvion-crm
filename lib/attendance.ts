@@ -48,8 +48,19 @@ export function getAttendanceDay(date = new Date()) {
   return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
 }
 
+export const MARK_IN_HOUR = 9;
+export const MARK_IN_MIN = 30;
+
 function minutesOfParts(parts: { hour: number; minute: number }) {
   return timeToMinutes(parts.hour, parts.minute);
+}
+
+export function isAfterMarkInWindow(date = new Date()) {
+  if (isWeeklyOff(date)) return false;
+  const minutes = minutesOfParts(getIndianParts(date));
+  const markStart = timeToMinutes(MARK_IN_HOUR, MARK_IN_MIN);
+  const officeEnd = timeToMinutes(OFFICE_END_HOUR, OFFICE_END_MIN);
+  return minutes >= markStart && minutes <= officeEnd;
 }
 
 export function isWeeklyOff(date = new Date()) {

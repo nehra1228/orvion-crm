@@ -49,11 +49,12 @@ export async function POST(req: Request) {
 
     if (status !== "OFFLINE") {
       const day = getAttendanceDay();
-      await prisma.attendance.upsert({
-        where: { userId_day: { userId: targetUserId, day } },
-        create: { userId: targetUserId, day, status, note: note ? String(note) : undefined },
-        update: { status, note: note ? String(note) : undefined },
-      });
+      const existing = await prisma.attendance.findUnique({ where: { userId_day: { userId: targetUserId, day } } });
+      if (!existing) {
+        await prisma.attendance.create({
+          data: { userId: targetUserId, day, status, note: note ? String(note) : undefined },
+        });
+      }
     }
 
     const up = await prisma.executiveState.upsert({
