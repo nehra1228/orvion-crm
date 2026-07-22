@@ -25,7 +25,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var theme=localStorage.getItem('orvion-theme'); if(theme==='dark'){document.documentElement.classList.add('dark');} else {document.documentElement.classList.remove('dark'); localStorage.removeItem('orvion-theme');}}catch(e){}})()`}
+          {`(function(){try{localStorage.removeItem('orvion-theme'); document.documentElement.classList.remove('dark');}catch(e){}})()`}
         </Script>
         {children}
         <ClientSetup />
