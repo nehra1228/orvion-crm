@@ -25,7 +25,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var theme=localStorage.getItem('orvion-theme'); if(theme==='dark'){document.documentElement.classList.add('dark');} else if(theme==='light'){document.documentElement.classList.remove('dark');} else if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}}catch(e){}})()`}
+          {`(function(){try{var theme=localStorage.getItem('orvion-theme'); if(theme==='dark'){document.documentElement.classList.add('dark');} else {document.documentElement.classList.remove('dark');}}catch(e){}})()`}
         </Script>
         {children}
         <ClientSetup />
