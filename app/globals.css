@@ -1,52 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: light;
-  --bg: #f7f8fc;
-  --bg-alt: #edf0f8;
-  --surface: rgba(255, 255, 255, 0.78);
-  --surface-strong: rgba(255, 255, 255, 0.96);
-  --surface-soft: rgba(246, 247, 252, 0.88);
-  --surface-border: rgba(30, 41, 80, 0.1);
-  --surface-border-strong: rgba(30, 41, 80, 0.17);
-  --glass: rgba(255, 255, 255, 0.66);
-  --glass-strong: rgba(255, 255, 255, 0.88);
-  --shadow-soft: 0 18px 48px rgba(44, 51, 92, 0.09);
-  --shadow-elevated: 0 30px 90px rgba(49, 46, 129, 0.14);
-  --text: #172043;
-  --muted: #68738e;
-  --accent: #5146d9;
-  --accent-strong: #3730a3;
-  --accent-soft: rgba(81, 70, 217, 0.11);
-  --success: #09816a;
-  --warning: #b46a15;
-  --danger: #c2395a;
-  --gradient:
-    radial-gradient(circle at 5% 0%, rgba(196, 181, 253, 0.43), transparent 28%),
-    radial-gradient(circle at 98% 6%, rgba(125, 211, 252, 0.36), transparent 28%),
-    radial-gradient(circle at 50% 110%, rgba(224, 231, 255, 0.88), transparent 42%),
-    linear-gradient(145deg, #ffffff 0%, #f5f5fc 47%, #e8edf8 100%);
-}
-
-
-html,
-body {
-  min-height: 100%;
-  margin: 0;
-  color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--gradient);
-  background-attachment: fixed;
-  text-rendering: optimizeLegibility;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-*::selection {
-  background: rgba(20, 121, 209, 0.18);
-  color: var(--text);
+  color-scheme: dark;
+  --bg: #05070f;
+  --bg-alt: #090b15;
+  --surface: rgba(12, 16, 29, 0.92);
+  --surface-strong: rgba(10, 14, 24, 0.98);
+  --surface-soft: rgba(12, 18, 33, 0.72);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --surface-border-strong: rgba(255, 255, 255, 0.14);
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-strong: rgba(255, 255, 255, 0.09);
+  --shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.26);
+  --shadow-elevated: 0 28px 110px rgba(0, 0, 0, 0.36);
+  --text: #f8f3e7;
+  --muted: #a3afc7;
+  --accent: #6ee7ff;
+  --accent-strong: #22d3ee;
+  --gradient: radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 24%), radial-gradient(circle at bottom right, rgba(34, 211, 238, 0.1), transparent 24%), linear-gradient(180deg, #020617 0%, #05080f 100%);
 }
 
 input:-webkit-autofill,
@@ -54,110 +25,93 @@ input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
-  -webkit-text-fill-color: var(--text) !important;
+  -webkit-text-fill-color: white !important;
   transition: background-color 9999s ease-in-out 0s;
 }
 
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--gradient);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(110, 231, 255, 0.18);
+  color: var(--text);
+}
+
 button,
-input,
 select,
-textarea {
+textarea,
+input {
   color: var(--text);
   border-color: var(--surface-border);
 }
 
-button,
-input,
-select,
-textarea,
-.card,
-.table,
-.section {
-  border-radius: 1.25rem;
-}
-
-button:not(:disabled),
-input,
-select,
-textarea {
-  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease, transform 180ms ease;
-}
-
-button:hover:not(:disabled):not(.bg-transparent) {
-  background-color: color-mix(in srgb, var(--accent-soft) 48%, transparent);
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: color-mix(in srgb, var(--accent) 56%, white) !important;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+button:hover:not(.bg-transparent),
+button:focus:not(.bg-transparent) {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 input::placeholder,
 textarea::placeholder {
   color: var(--muted) !important;
-  opacity: 0.72;
 }
 
-.bg-slate-950,
-.bg-slate-950\/90,
-.bg-slate-950\/80,
 .bg-slate-900,
-.bg-slate-900\/90,
-.bg-slate-900\/80,
+.bg-slate-950,
 .bg-slate-800,
-.bg-slate-700 {
-  background-color: var(--surface) !important;
-}
-
+.bg-slate-700,
+.bg-slate-950\/90,
+.bg-slate-900\/90,
 .bg-slate-950\/10,
 .bg-slate-900\/10,
-.bg-slate-800\/10,
-.bg-white\/5,
-.bg-white\/10 {
-  background-color: var(--surface-soft) !important;
+.bg-slate-800\/10 {
+  background: var(--surface) !important;
 }
 
-.bg-blue-400,
 .bg-blue-500,
 .bg-blue-600,
-.bg-cyan-300,
-.bg-cyan-400,
-.bg-cyan-500 {
-  background: linear-gradient(135deg, #635bdf 0%, #4f46e5 52%, #0f84c7 100%) !important;
-  color: #f8fbff !important;
+.bg-blue-400 {
+  background: linear-gradient(135deg, #22d3ee, #38bdf8) !important;
+  color: #050816 !important;
 }
 
 .hover\:bg-blue-400:hover,
 .hover\:bg-blue-500:hover,
-.hover\:bg-blue-600:hover,
-.hover\:bg-cyan-400:hover,
-.hover\:bg-cyan-500:hover {
-  background: linear-gradient(135deg, #756df0 0%, #5b52e8 52%, #148ed3 100%) !important;
+.hover\:bg-blue-600:hover {
+  background: linear-gradient(135deg, #38bdf8, #22d3ee) !important;
 }
 
-.text-white,
-.text-slate-100,
-.text-slate-200,
-.text-slate-950 {
-  color: var(--text) !important;
-}
-
-.text-slate-300,
 .text-slate-400,
 .text-slate-500,
+.text-slate-300,
+.text-slate-200,
 .text-slate-600,
 .text-slate-700,
-.text-slate-800 {
+.text-slate-800,
+.text-slate-950,
+.text-slate-100 {
   color: var(--muted) !important;
 }
 
-.text-blue-400,
+.text-white,
 .text-blue-500,
-.text-cyan-200,
-.text-cyan-300,
-.text-cyan-400,
+.text-blue-400 {
+  color: var(--text) !important;
+}
+
 .text-gold,
 .text-accent,
 .text-yellow-300,
@@ -165,19 +119,14 @@ textarea::placeholder {
   color: var(--accent) !important;
 }
 
-.border-slate-700,
 .border-slate-800,
-.border-slate-900,
-.border-white\/10,
-.border-white\/15 {
+.border-slate-700,
+.border-slate-900 {
   border-color: var(--surface-border) !important;
 }
 
 .border-blue-500,
-.border-blue-600,
-.border-cyan-300,
-.border-cyan-400,
-.border-cyan-500 {
+.border-blue-600 {
   border-color: var(--accent) !important;
 }
 
@@ -189,47 +138,12 @@ textarea::placeholder {
   box-shadow: var(--shadow-soft);
 }
 
-html:not(.dark) .backdrop-blur-xl,
-html:not(.dark) .backdrop-blur-2xl {
-  box-shadow: var(--shadow-soft);
-}
-
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
-}
-
-/* Executive workspace: preserve the premium lead-card experience beyond mobile.
-   The spreadsheet remains data-compatible but never forces a laptop viewport wider. */
-@media (min-width: 768px) {
-  div.md\:hidden:has(+ div.hidden > table.min-w-\[1050px\]) {
-    display: grid !important;
-  }
-
-  div.hidden:has(> table.min-w-\[1050px\]) {
-    display: none !important;
-  }
-}
-
-/* Executive Flight Deck visual refinement */
-main:has(.bg-\[\#040814\]) {
-  background-image:
-    radial-gradient(circle at 8% 10%, rgba(34, 211, 238, 0.10), transparent 28%),
-    radial-gradient(circle at 92% 82%, rgba(99, 102, 241, 0.12), transparent 30%),
-    linear-gradient(135deg, #030712 0%, #071124 52%, #040712 100%) !important;
-}
-
-main:has(.bg-\[\#040814\]) [class*="backdrop-blur"] {
-  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-}
-
-main:has(table.min-w-\[1050px\]) {
-  overflow-x: clip;
+button,
+input,
+select,
+textarea,
+.card,
+.table,
+.section {
+  border-radius: 1.5rem;
 }
