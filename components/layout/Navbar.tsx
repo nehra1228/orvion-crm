@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bell, CalendarDays, CheckCheck, ChevronDown, CircleHelp, Command, LogOut,
-  Mail, Menu, Moon, Search, Settings, Sun, UserRound,
+  Mail, Menu, Search, Settings, UserRound,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -34,7 +34,6 @@ export default function Navbar({ title, subtitle }: NavbarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [username, setUsername] = useState("Administrator");
   const [userRole, setUserRole] = useState<string>("");
   const pathSegments = pathname?.split("/").filter(Boolean) ?? [];
@@ -44,8 +43,6 @@ export default function Navbar({ title, subtitle }: NavbarProps) {
   useEffect(() => {
     const savedUser = window.localStorage.getItem("orvion-login-username");
     if (savedUser) setUsername(savedUser);
-    const savedTheme = window.localStorage.getItem("orvion-theme") as "dark" | "light" | null;
-    if (savedTheme) setTheme(savedTheme);
     const keydown = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); } if (event.key === "Escape") { setSearchOpen(false); setNotificationsOpen(false); setProfileOpen(false); } };
     window.addEventListener("keydown", keydown);
 
@@ -58,7 +55,6 @@ export default function Navbar({ title, subtitle }: NavbarProps) {
 
     return () => window.removeEventListener("keydown", keydown);
   }, []);
-  const setAppTheme = () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); window.localStorage.setItem("orvion-theme", next); document.documentElement.classList.toggle("dark", next === "dark"); };
   const go = (href: string) => { setSearchOpen(false); setProfileOpen(false); router.push(href); };
   const logout = async () => {
     if (userRole === "EXECUTIVE") {
@@ -82,7 +78,7 @@ export default function Navbar({ title, subtitle }: NavbarProps) {
     <button onClick={() => window.dispatchEvent(new Event("orvion:toggle-navigation"))} aria-label="Toggle navigation" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-white/[0.06] hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-300/45 lg:hidden"><Menu className="h-5 w-5" /></button>
     <div className="min-w-0 shrink-0"><div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[.12em] text-slate-500"><span>ORVION</span><span className="text-slate-700">/</span><span className="hidden text-slate-400 sm:inline">Admin</span></div><motion.div key={title ?? detail.title} initial={{ opacity: 0, y: reducedMotion ? 0 : 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .25 }}><h1 className="truncate text-sm font-semibold text-white sm:text-base">{title ?? detail.title}</h1><p className="hidden max-w-52 truncate text-[10px] text-slate-500 md:block">{subtitle ?? detail.subtitle}</p></motion.div></div>
     <div className="relative mx-auto hidden w-full max-w-md lg:block"><button onClick={() => setSearchOpen(true)} className="flex h-9 w-full items-center gap-2 rounded-xl border border-white/[0.08] bg-slate-900/65 px-3 text-left text-xs text-slate-500 transition hover:border-cyan-300/20 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-300/35"><Search className="h-3.5 w-3.5" /><span>Search anything…</span><span className="ml-auto flex items-center gap-0.5 rounded-md border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-slate-500"><Command className="h-2.5 w-2.5" />K</span></button></div>
-    <div className="ml-auto flex items-center gap-1.5"><button onClick={() => setSearchOpen(true)} aria-label="Search" className={`${iconButton} lg:hidden`}><Search className="h-4 w-4" /></button><div className="relative"><button onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }} aria-label="Notifications" aria-expanded={notificationsOpen} className={iconButton}><Bell className={`h-4 w-4 ${notificationsOpen ? "text-cyan-200" : ""}`} /><span className="absolute right-1.5 top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full border border-slate-950 bg-cyan-300 px-0.5 text-[8px] font-bold text-slate-950">3</span></button><AnimatePresence>{notificationsOpen && <NotificationPanel close={() => setNotificationsOpen(false)} />}</AnimatePresence></div><button aria-label="Messages" className={`${iconButton} hidden sm:flex`}><Mail className="h-4 w-4" /></button><button aria-label="Calendar" className={`${iconButton} hidden sm:flex`}><CalendarDays className="h-4 w-4" /></button><button onClick={setAppTheme} aria-label="Toggle theme" aria-pressed={theme === "light"} className={`${iconButton} hidden md:flex`}>{theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4 text-amber-200" />}</button><div className="relative"><button onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }} aria-label="Open user menu" aria-expanded={profileOpen} className="flex items-center gap-2 rounded-xl border border-transparent p-1 pr-2 transition hover:border-white/[0.1] hover:bg-white/[0.05] focus:outline-none focus:ring-2 focus:ring-cyan-300/45"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-400 to-blue-500 text-[10px] font-bold text-white">{username.slice(0, 1).toUpperCase()}</span><span className="hidden max-w-24 text-left lg:block"><span className="block truncate text-[11px] font-semibold text-slate-200">{username}</span><span className="block text-[9px] text-slate-500">Administrator</span></span><ChevronDown className="hidden h-3.5 w-3.5 text-slate-500 lg:block" /></button><AnimatePresence>{profileOpen && <ProfileMenu go={go} logout={logout} />}</AnimatePresence></div></div>
+    <div className="ml-auto flex items-center gap-1.5"><button onClick={() => setSearchOpen(true)} aria-label="Search" className={`${iconButton} lg:hidden`}><Search className="h-4 w-4" /></button><div className="relative"><button onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }} aria-label="Notifications" aria-expanded={notificationsOpen} className={iconButton}><Bell className={`h-4 w-4 ${notificationsOpen ? "text-cyan-200" : ""}`} /><span className="absolute right-1.5 top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full border border-slate-950 bg-cyan-300 px-0.5 text-[8px] font-bold text-slate-950">3</span></button><AnimatePresence>{notificationsOpen && <NotificationPanel close={() => setNotificationsOpen(false)} />}</AnimatePresence></div><button aria-label="Messages" className={`${iconButton} hidden sm:flex`}><Mail className="h-4 w-4" /></button><button aria-label="Calendar" className={`${iconButton} hidden sm:flex`}><CalendarDays className="h-4 w-4" /></button><div className="relative"><button onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }} aria-label="Open user menu" aria-expanded={profileOpen} className="flex items-center gap-2 rounded-xl border border-transparent p-1 pr-2 transition hover:border-white/[0.1] hover:bg-white/[0.05] focus:outline-none focus:ring-2 focus:ring-cyan-300/45"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-400 to-blue-500 text-[10px] font-bold text-white">{username.slice(0, 1).toUpperCase()}</span><span className="hidden max-w-24 text-left lg:block"><span className="block truncate text-[11px] font-semibold text-slate-200">{username}</span><span className="block text-[9px] text-slate-500">Administrator</span></span><ChevronDown className="hidden h-3.5 w-3.5 text-slate-500 lg:block" /></button><AnimatePresence>{profileOpen && <ProfileMenu go={go} logout={logout} />}</AnimatePresence></div></div>
   </motion.div><AnimatePresence>{searchOpen && <CommandPalette items={suggestions} close={() => setSearchOpen(false)} go={go} />}</AnimatePresence></header>;
 }
 
