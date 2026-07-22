@@ -20,8 +20,8 @@ type Dashboard = {
 };
 
 const remarkOptions: Remark[] = ["INTERESTED", "FOLLOW_UP", "BOOKED", "SITE_VISIT", "NOT_INTERESTED", "WRONG_NUMBER", "BUSY", "NO_ANSWER"];
-const surface = "relative overflow-hidden rounded-[28px] border border-white/[0.09] bg-[linear-gradient(135deg,rgba(15,24,46,.86),rgba(4,10,25,.76))] shadow-[0_24px_70px_-38px_rgba(0,0,0,.95),inset_0_1px_0_rgba(255,255,255,.055)] backdrop-blur-2xl";
-const buttonBase = "inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl border border-white/[.09] bg-white/[.045] px-3.5 py-2.5 text-sm font-semibold text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,.045)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200/25 hover:bg-white/[.085] hover:shadow-[0_14px_32px_-20px_rgba(34,211,238,.42)] focus:outline-none focus:ring-2 focus:ring-cyan-400/35 disabled:pointer-events-none disabled:opacity-40";
+const surface = "relative overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_70px_-38px_rgba(15,23,42,.08)]";
+const buttonBase = "inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-slate-100 px-3.5 py-2.5 text-sm font-semibold text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,.8)] transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-slate-200 hover:shadow-[0_14px_32px_-20px_rgba(34,211,238,.16)] focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:pointer-events-none disabled:opacity-40";
 const label = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 const object = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const text = (value: unknown) => typeof value === "string" ? value.trim() : typeof value === "number" ? String(value) : "";
@@ -141,7 +141,7 @@ export default function ExecutiveDashboard() {
     { id: "today", title: "Today's Leads", sub: "Priority outreach", icon: <UsersRound /> }, { id: "calling", title: "Calling Data", sub: "Manual call queue", icon: <Phone /> }, { id: "autocaller", title: "Autocaller", sub: "Dialer controls", icon: <Headphones /> }, { id: "workspace", title: "Lead Workspace", sub: "Interested & follow-ups", icon: <FileSpreadsheet /> },
   ];
 
-  return <main className="relative min-h-screen overflow-x-hidden bg-[#040814] px-3 py-4 text-slate-100 sm:px-5 sm:py-6 lg:px-7 lg:py-8">
+  return <main className="relative min-h-screen overflow-x-hidden bg-slate-100 px-3 py-4 text-slate-900 sm:px-5 sm:py-6 lg:px-7 lg:py-8">
     <div className="pointer-events-none fixed inset-0 overflow-hidden"><motion.div animate={{ x: [0, 45, 0], y: [0, -25, 0] }} transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }} className="absolute -left-48 -top-40 h-[620px] w-[620px] rounded-full bg-cyan-400/[.12] blur-[160px]" /><motion.div animate={{ x: [0, -55, 0], y: [0, 35, 0] }} transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }} className="absolute -right-44 bottom-0 h-[650px] w-[650px] rounded-full bg-indigo-500/[.12] blur-[185px]" /><div className="absolute inset-0 opacity-[.18] [background-image:linear-gradient(rgba(148,163,184,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,.06)_1px,transparent_1px)] [background-size:64px_64px]" /></div>
     <div className="relative mx-auto max-w-[1700px] space-y-4 sm:space-y-5">
       <header className={`${surface} p-5 sm:p-6`}>

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { installTimeUppercase } from "@/lib/polyfills/time";
@@ -24,9 +23,6 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{localStorage.removeItem('orvion-theme'); document.documentElement.classList.remove('dark');}catch(e){}})()`}
-        </Script>
         {children}
         <ClientSetup />
 
