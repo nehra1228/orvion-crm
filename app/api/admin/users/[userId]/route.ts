@@ -61,15 +61,17 @@ export async function DELETE(
       prisma.call.deleteMany({ where: { executiveId: userId } }),
       prisma.upload.deleteMany({ where: { uploadedById: userId } }),
       prisma.executiveState.deleteMany({ where: { userId } }),
-      prisma.lead.deleteMany({ where: { assignedToId: userId } }),
+      // Do not delete leads that are INTERESTED or FOLLOW_UP; only remove other assigned leads
+      prisma.lead.deleteMany({ where: { assignedToId: userId, status: { notIn: ["INTERESTED", "FOLLOW_UP"] } } }),
       prisma.campaign.updateMany({ where: { ownerId: userId }, data: { ownerId: null } }),
       prisma.user.delete({ where: { id: userId } }),
     ]);
 
     const deletedLeads = result[4]?.count ?? null;
     return NextResponse.json({ success: true, deletedLeads });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("admin delete user error:", err);
-    return NextResponse.json({ message: err?.message || "Failed to delete user." }, { status: 500 });
+    const message = err && typeof err === "object" && "message" in err ? (err as Error & { message?: string }).message : "Failed to delete user.";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }

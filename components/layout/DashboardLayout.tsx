@@ -6,7 +6,7 @@ import Navbar from "./Navbar";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="relative flex min-h-screen min-w-0 overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,.12),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,.08),transparent_16%),linear-gradient(180deg,#020617_0%,#05080f_100%)]">
+    <div className="relative flex min-h-screen min-w-0 overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,.1),transparent_18%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,.12),transparent_16%),linear-gradient(180deg,#020615_0%,#040b17_100%)]">
       <Sidebar />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden">
         <Navbar />

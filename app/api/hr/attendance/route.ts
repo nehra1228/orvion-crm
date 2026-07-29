@@ -32,7 +32,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const isSuperHr = user.role === "SUPER_ADMIN" || user.role === "SUPER_HR";
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
@@ -109,7 +108,8 @@ export async function GET(request: Request) {
 
   const format = url.searchParams.get("format");
   if (format === "csv") {
-    if (!isSuperHr) {
+    const canExport = hrRoles.includes(user.role);
+    if (!canExport) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

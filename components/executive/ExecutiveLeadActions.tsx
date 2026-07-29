@@ -62,24 +62,31 @@ const [followUps, setFollowUps] = useState<Record<string, string>>({});
   );
 
   async function updateLead(
-  leadId: string,
-  field: string,
-  value: string
-) {
-  setStatusMessage(null);
+    leadId: string,
+    field: string,
+    value: string
+  ) {
+    setStatusMessage(null);
 
-  try {
-    const response = await fetch("/api/executive/leads", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        leadId,
-        field,
-        value,
-      }),
-    });
+    const payload: Record<string, unknown> = { leadId };
+    if (field === "remark") {
+      payload.remark = value;
+    } else if (field === "notes") {
+      payload.notes = value;
+    } else if (field === "status") {
+      payload.status = value;
+    } else if (field === "followUpDate") {
+      payload.followUpDate = value || null;
+    }
+
+    try {
+      const response = await fetch("/api/executive/leads", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
     if (!response.ok) {
       throw new Error();

@@ -6,24 +6,33 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 type Executive = {
   id: string;
   username: string;
+  fullName?: string | null;
+  role?: string | null;
 };
 
 export default function ExecutivesPage() {
   const [executives, setExecutives] = useState<Executive[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const loadExecutives = async () => {
       setLoading(true);
+      setError("");
       try {
-        const res = await fetch("/api/users?role=EXECUTIVE", { credentials: "include" });
-        if (!res.ok) throw new Error("Failed to load executives");
+        const res = await fetch("/api/admin/users", { credentials: "include" });
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(body || "Failed to load executives");
+        }
         const data = await res.json();
-        setExecutives(Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []);
+        const allUsers = Array.isArray(data) ? data as Executive[] : Array.isArray(data?.data) ? data.data as Executive[] : [];
+        setExecutives(allUsers.filter((user) => user.role === "EXECUTIVE"));
       } catch (error) {
         console.error(error);
         setExecutives([]);
+        setError(error instanceof Error ? error.message : String(error));
       } finally {
         setLoading(false);
       }
@@ -41,6 +50,8 @@ export default function ExecutivesPage() {
 
           {loading ? (
             <p className="mt-6 text-sm text-slate-400">Loading executives…</p>
+          ) : error ? (
+            <p className="mt-6 text-sm text-rose-300">Unable to load executives: {error}</p>
           ) : executives.length === 0 ? (
             <p className="mt-6 text-sm text-slate-400">No executives found.</p>
           ) : (
@@ -52,7 +63,7 @@ export default function ExecutivesPage() {
                     onClick={() => window.location.assign(`/admin/executives/${user.id}`)}
                     className="flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 text-left text-lg font-semibold text-white transition hover:border-cyan-300/40 hover:bg-slate-900"
                   >
-                    {user.username}
+                    {user.fullName || user.username}
                   </button>
                   <button
                     type="button"

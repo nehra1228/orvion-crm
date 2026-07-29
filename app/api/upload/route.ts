@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import * as XLSX from "xlsx";
 
+const seemsLikePhone = (value: string) => {
+  const normalized = String(value ?? "").trim();
+  const digits = normalized.replace(/\D/g, "");
+  return Boolean(digits.length >= 7 && /^[0-9()+\s-]+$/.test(normalized));
+};
+
+const isMissingName = (value: string) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return !normalized || /^(no\s*name|unknown|unnamed)$/.test(normalized) || seemsLikePhone(normalized);
+};
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -48,12 +59,14 @@ export async function POST(req: NextRequest) {
       : null;
 
     for (const row of rows) {
-      if (!row.Name || !row.Mobile) continue;
+      const rowName = row.Name ? String(row.Name).trim() : "";
+      const rowMobile = row.Mobile ? String(row.Mobile).trim() : "";
+      if (isMissingName(rowName) || !rowMobile) continue;
 
       await prisma.lead.create({
         data: {
-          name: String(row.Name),
-          mobile: String(row.Mobile),
+          name: rowName,
+          mobile: rowMobile,
           city: row.City ? String(row.City) : null,
           project: row.Project ? String(row.Project) : null,
           source: row.Source ? String(row.Source) : null,

@@ -17,10 +17,11 @@ export async function DELETE(
   }
 
   try {
-    const result = await prisma.lead.deleteMany({ where: { assignedToId: userId, status: { not: "INTERESTED" } } });
+    const result = await prisma.lead.deleteMany({ where: { assignedToId: userId, status: { notIn: ["INTERESTED", "FOLLOW_UP"] } } });
     return NextResponse.json({ deleted: result.count });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("/api/admin/users/[userId]/leads DELETE error:", err);
-    return NextResponse.json({ message: err?.message || "Failed to delete leads." }, { status: 500 });
+    const message = err && typeof err === "object" && "message" in err ? (err as Error & { message?: string }).message : "Failed to delete leads.";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }

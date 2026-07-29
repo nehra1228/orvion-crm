@@ -66,9 +66,16 @@ export default function UploadLeadsPage() {
       form.append("file", file); form.append("assignmentMode", mode); form.append("distributionMode", mode); form.append("destinationQueue", queue); form.append("executiveQueue", queue); if (source) { form.append("source", source); form.append("uploadSource", source); } if (executive) { form.append("assignedToId", executive); form.append("executiveId", executive); } if (team) form.append("teamId", team);
       const response = await fetch("/api/admin/upload", { method: "POST", credentials: "include", body: form });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(value(result?.message) || "Upload failed.");
+      if (!response.ok) {
+        const errorMessage = result?.message || result?.error || "Upload failed";
+        throw new Error(errorMessage);
+      }
       setNotice({ tone: "success", message: `Imported ${value(result?.created) || "your"} leads. They are ready in ${queues.find((item) => item.id === queue)?.title}.` }); setFile(null); if (input.current) input.current.value = "";
-    } catch (error) { setNotice({ tone: "error", message: error instanceof Error ? error.message : "Upload failed." }); }
+    } catch (error) { 
+      const msg = error instanceof Error ? error.message : "Upload failed.";
+      console.error("Upload error:", msg);
+      setNotice({ tone: "error", message: msg }); 
+    }
     finally { setLoading(false); }
   };
 

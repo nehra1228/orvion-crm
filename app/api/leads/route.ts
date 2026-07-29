@@ -15,15 +15,32 @@ export async function GET(req: Request) {
     const search = String(searchParams.get("search") || "").trim();
     const status = searchParams.get("status") || undefined;
     const remark = String(searchParams.get("remark") || "").trim().toUpperCase() || undefined;
+    const executiveId = searchParams.get("executiveId") || undefined;
+    const teamId = searchParams.get("teamId") || undefined;
+    const city = searchParams.get("city") || undefined;
+    const project = searchParams.get("project") || undefined;
+    const source = searchParams.get("source") || undefined;
+    const createdFrom = searchParams.get("createdFrom") || undefined;
+    const createdTo = searchParams.get("createdTo") || undefined;
+    const followUpFrom = searchParams.get("followUpFrom") || undefined;
+    const followUpTo = searchParams.get("followUpTo") || undefined;
     const page = Number(searchParams.get("page") || "1");
     const pageSize = Number(searchParams.get("pageSize") || "10");
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (user.role === "EXECUTIVE") {
       where.assignedToId = user.id;
     } else if (user.role === "TEAM_LEADER") {
       where.teamId = user.teamId;
+    }
+
+    if (executiveId) {
+      where.assignedToId = executiveId;
+    }
+
+    if (teamId) {
+      where.teamId = teamId;
     }
 
     if (status) {
@@ -35,6 +52,38 @@ export async function GET(req: Request) {
         where.remark = { not: null };
       } else {
         where.remark = remark;
+      }
+    }
+
+    if (city) {
+      where.city = { contains: city, mode: "insensitive" };
+    }
+
+    if (project) {
+      where.project = { contains: project, mode: "insensitive" };
+    }
+
+    if (source) {
+      where.source = { contains: source, mode: "insensitive" };
+    }
+
+    if (createdFrom || createdTo) {
+      where.createdAt = {};
+      if (createdFrom) {
+        (where.createdAt as Record<string, Date>).gte = new Date(`${createdFrom}T00:00:00.000Z`);
+      }
+      if (createdTo) {
+        (where.createdAt as Record<string, Date>).lte = new Date(`${createdTo}T23:59:59.999Z`);
+      }
+    }
+
+    if (followUpFrom || followUpTo) {
+      where.followUpDate = {};
+      if (followUpFrom) {
+        (where.followUpDate as Record<string, Date>).gte = new Date(`${followUpFrom}T00:00:00.000Z`);
+      }
+      if (followUpTo) {
+        (where.followUpDate as Record<string, Date>).lte = new Date(`${followUpTo}T23:59:59.999Z`);
       }
     }
 

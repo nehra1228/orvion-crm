@@ -3,6 +3,22 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 import { LeadRemark, LeadStatus } from "@prisma/client";
 
+function normalizeRemark(value: unknown): LeadRemark | null {
+  const candidate = String(value ?? "").trim().toUpperCase();
+
+  if (!candidate) {
+    return null;
+  }
+
+  if (candidate === "FOLLOW_UP" || candidate === "FOLLOW UP" || candidate === "FOLLOWUP") {
+    return LeadRemark.CALLBACK;
+  }
+
+  return Object.values(LeadRemark).includes(candidate as LeadRemark)
+    ? (candidate as LeadRemark)
+    : null;
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
@@ -12,16 +28,10 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const leadId = String(body?.leadId || "");
-  const remark = String(body?.remark || "").toUpperCase();
+  const remark = normalizeRemark(body?.remark);
 
   if (!leadId || !remark) {
     return NextResponse.json({ message: "Lead ID and remark are required." }, { status: 400 });
-  }
-
-  const allowedRemarks = Object.values(LeadRemark);
-
-  if (!allowedRemarks.includes(remark as LeadRemark)) {
-    return NextResponse.json({ message: "Invalid remark." }, { status: 400 });
   }
 
   const lead = await prisma.lead.findUnique({ where: { id: leadId } });
@@ -36,15 +46,19 @@ export async function POST(request: Request) {
 
   const oldStatus = lead.status;
   const updateData: { remark: LeadRemark; status?: LeadStatus } = {
-    remark: remark as LeadRemark,
+    remark,
   };
 
-  if (remark === "INTERESTED") {
+  if (remark === LeadRemark.INTERESTED) {
     updateData.status = LeadStatus.INTERESTED;
   }
 
-  if (remark === "NOT_INTERESTED") {
+  if (remark === LeadRemark.NOT_INTERESTED) {
     updateData.status = LeadStatus.LOST;
+  }
+  // Treat callback-style follow-ups as scheduling a follow up
+  if (remark === LeadRemark.CALLBACK) {
+    updateData.status = LeadStatus.FOLLOW_UP;
   }
 
   const updatedLead = await prisma.lead.update({
@@ -58,7 +72,7 @@ export async function POST(request: Request) {
       userId: user.id,
       oldStatus,
       newStatus: updateData.status ?? oldStatus,
-      remark: remark as LeadRemark,
+      remark,
       note: `Executive ${user.username} updated remark to ${remark}`,
     },
   });
@@ -99,14 +113,25 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const updateData: any = {};
+    const updateData: {
+      remark?: LeadRemark | null;
+      status?: LeadStatus;
+      notes?: string | null;
+      followUpDate?: Date | null;
+    } = {};
 
-    if (body.remark !== undefined) {
-      updateData.remark = body.remark || null;
-      if (body.remark === "INTERESTED") {
+    const remarkValue = body.remark ?? (body.field === "remark" ? body.value : undefined);
+    const normalizedRemark = normalizeRemark(remarkValue);
+
+    if (remarkValue !== undefined) {
+      updateData.remark = normalizedRemark ?? null;
+      if (normalizedRemark === LeadRemark.INTERESTED) {
         updateData.status = LeadStatus.INTERESTED;
-      } else if (body.remark === "NOT_INTERESTED") {
+      } else if (normalizedRemark === LeadRemark.NOT_INTERESTED) {
         updateData.status = LeadStatus.LOST;
+      }
+      if (normalizedRemark === LeadRemark.CALLBACK) {
+        updateData.status = LeadStatus.FOLLOW_UP;
       }
     }
 
@@ -122,6 +147,12 @@ export async function PATCH(request: Request) {
       updateData.followUpDate = body.followUpDate
         ? new Date(body.followUpDate)
         : null;
+      if (updateData.followUpDate) {
+        updateData.status = LeadStatus.FOLLOW_UP;
+      }
+    } else if (normalizedRemark === LeadRemark.CALLBACK) {
+      updateData.followUpDate = new Date();
+      updateData.status = LeadStatus.FOLLOW_UP;
     }
 
     const updatedLead = await prisma.lead.update({
@@ -189,6 +220,11 @@ export async function DELETE(request: Request) {
 
     if (!lead || !isAuthorizedForLead) {
       return NextResponse.json({ message: "Lead not found or unauthorized." }, { status: 404 });
+    }
+
+    // Prevent deletion of protected leads
+    if (lead.status === "INTERESTED" || lead.status === "FOLLOW_UP") {
+      return NextResponse.json({ message: "Lead is protected and cannot be deleted." }, { status: 403 });
     }
 
     await prisma.$transaction([
