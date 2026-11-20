@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
+import { deleteLeads } from "@/lib/leads";
 
 export async function DELETE(
   request: NextRequest,
@@ -13,6 +13,6 @@ export async function DELETE(
     return NextResponse.json({ message: "Missing user ID." }, { status: 400 });
   }
 
-  const result = await prisma.lead.deleteMany({ where: { assignedToId: userId } });
-  return NextResponse.json({ deleted: result.count });
+  const deleted = await deleteLeads({ assignedToId: userId });
+  return NextResponse.json({ deleted });
 }

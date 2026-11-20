@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/session";
+import { deleteLeads } from "@/lib/leads";
 
 export async function DELETE() {
   await requireUser("ADMIN");
 
-  const result = await prisma.lead.deleteMany({});
-  return NextResponse.json({ deleted: result.count });
+  const deleted = await deleteLeads({});
+  return NextResponse.json({ deleted });
 }
