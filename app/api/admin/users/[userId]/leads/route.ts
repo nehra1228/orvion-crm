@@ -17,8 +17,34 @@ export async function DELETE(
   }
 
   try {
-    const result = await prisma.lead.deleteMany({ where: { assignedToId: userId, status: { notIn: ["INTERESTED", "FOLLOW_UP"] } } });
-    return NextResponse.json({ deleted: result.count });
+    const deleted = await prisma.$transaction(async (transaction) => {
+      const leads = await transaction.lead.findMany({
+        where: {
+          assignedToId: userId,
+          status: { notIn: ["INTERESTED", "FOLLOW_UP"] },
+        },
+        select: { id: true },
+      });
+
+      if (leads.length === 0) {
+        return 0;
+      }
+
+      const leadIds = leads.map((lead) => lead.id);
+      await transaction.activity.deleteMany({
+        where: { leadId: { in: leadIds } },
+      });
+      await transaction.call.deleteMany({
+        where: { leadId: { in: leadIds } },
+      });
+
+      const result = await transaction.lead.deleteMany({
+        where: { id: { in: leadIds } },
+      });
+      return result.count;
+    });
+
+    return NextResponse.json({ deleted });
   } catch (err: unknown) {
     console.error("/api/admin/users/[userId]/leads DELETE error:", err);
     const message = err && typeof err === "object" && "message" in err ? (err as Error & { message?: string }).message : "Failed to delete leads.";
