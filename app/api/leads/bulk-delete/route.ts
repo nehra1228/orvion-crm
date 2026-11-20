@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { LeadRemark, LeadStatus, Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { deleteLeads } from "@/lib/delete-leads";
 import { getCurrentUser } from "@/lib/auth/session";
+
+export const maxDuration = 60;
 
 export async function DELETE(req: Request) {
   try {
@@ -46,19 +48,7 @@ export async function DELETE(req: Request) {
       status: { notIn: [LeadStatus.INTERESTED, LeadStatus.FOLLOW_UP] },
     };
 
-    const deleted = await prisma.$transaction(async (tx) => {
-      const matchingLeads = await tx.lead.findMany({
-        where,
-        select: { id: true },
-      });
-      const ids = matchingLeads.map((lead) => lead.id);
-      if (!ids.length) return 0;
-
-      await tx.activity.deleteMany({ where: { leadId: { in: ids } } });
-      await tx.call.deleteMany({ where: { leadId: { in: ids } } });
-      const result = await tx.lead.deleteMany({ where: { id: { in: ids } } });
-      return result.count;
-    });
+    const deleted = await deleteLeads(where);
 
     return NextResponse.json({ success: true, deleted });
   } catch (error) {

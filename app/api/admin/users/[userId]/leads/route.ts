@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
+import { deleteLeads } from "@/lib/delete-leads";
+
+export const maxDuration = 60;
 
 export async function DELETE(
   request: NextRequest,
@@ -17,31 +19,9 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await prisma.$transaction(async (transaction) => {
-      const leads = await transaction.lead.findMany({
-        where: {
-          assignedToId: userId,
-          status: { notIn: ["INTERESTED", "FOLLOW_UP"] },
-        },
-        select: { id: true },
-      });
-
-      if (leads.length === 0) {
-        return 0;
-      }
-
-      const leadIds = leads.map((lead) => lead.id);
-      await transaction.activity.deleteMany({
-        where: { leadId: { in: leadIds } },
-      });
-      await transaction.call.deleteMany({
-        where: { leadId: { in: leadIds } },
-      });
-
-      const result = await transaction.lead.deleteMany({
-        where: { id: { in: leadIds } },
-      });
-      return result.count;
+    const deleted = await deleteLeads({
+      assignedToId: userId,
+      status: { notIn: ["INTERESTED", "FOLLOW_UP"] },
     });
 
     return NextResponse.json({ deleted });
