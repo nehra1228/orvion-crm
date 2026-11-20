@@ -1,13 +1,35 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { sendAccountCredentialsEmail } from "@/lib/email";
 
 export async function GET() {
+  const current = await getCurrentUser();
+  if (!current) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const allowedRoles = ["ADMIN", "SUPER_ADMIN", "COMPANY_ADMIN", "HR", "SUPER_HR"];
+  if (!allowedRoles.includes(current.role)) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const users = await prisma.user.findMany({
     orderBy: [{ role: "asc" }, { username: "asc" }],
-    include: {
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      role: true,
+      active: true,
+      fullName: true,
+      companyId: true,
+      departmentId: true,
+      teamId: true,
+      createdAt: true,
+      updatedAt: true,
       company: { select: { id: true, name: true } },
       department: { select: { id: true, name: true } },
       team: { select: { id: true, name: true } },
@@ -42,7 +64,7 @@ export async function POST(request: Request) {
 
   const hashedPassword = await hashPassword(password);
 
-  const data: any = {
+  const data: Prisma.UserUncheckedCreateInput = {
     username,
     password: hashedPassword,
     role,
@@ -56,7 +78,22 @@ export async function POST(request: Request) {
   if (teamId) data.teamId = teamId;
 
   try {
-    const user = await prisma.user.create({ data });
+    const user = await prisma.user.create({
+      data,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        active: true,
+        fullName: true,
+        companyId: true,
+        departmentId: true,
+        teamId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
     if (email) {
       try {
         await sendAccountCredentialsEmail({ to: email, username, password });
@@ -65,27 +102,46 @@ export async function POST(request: Request) {
       }
     }
     return NextResponse.json(user);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error creating user:", err);
     // Prisma unique constraint error
-    if (err?.code === "P2002") {
-      const target = err?.meta?.target ?? "field";
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const target = err.meta?.target ?? "field";
       return NextResponse.json({ message: `A record with that ${target} already exists.` }, { status: 409 });
     }
     // If Prisma complains about an unknown 'email' argument (older client/schema mismatch), retry without email as a fallback
-    const message = err?.message || "";
+    const message = err instanceof Error ? err.message : "";
     if (message.includes("Unknown argument `email`") || message.includes("Unknown arg `email`")) {
       try {
-        const fallbackData = { username, password: hashedPassword, role, active: true } as any;
-        const user = await prisma.user.create({ data: fallbackData });
+        const fallbackData: Prisma.UserUncheckedCreateInput = {
+          username,
+          password: hashedPassword,
+          role,
+          active: true,
+        };
+        const user = await prisma.user.create({
+          data: fallbackData,
+          select: {
+            id: true,
+            username: true,
+            role: true,
+            active: true,
+            fullName: true,
+            companyId: true,
+            departmentId: true,
+            teamId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
         return NextResponse.json({ message: "User created (email not saved due to schema mismatch).", user });
-      } catch (err2: any) {
+      } catch (err2: unknown) {
         console.error("Fallback create without email also failed:", err2);
       }
     }
 
     // Expose error message in non-production for easier debugging
-    const devMsg = process.env.NODE_ENV === "production" ? "Could not create user." : (err?.message || "Could not create user.");
-    return NextResponse.json({ message: devMsg, details: process.env.NODE_ENV === "production" ? undefined : err }, { status: 500 });
+    const devMsg = process.env.NODE_ENV === "production" ? "Could not create user." : (message || "Could not create user.");
+    return NextResponse.json({ message: devMsg, details: process.env.NODE_ENV === "production" ? undefined : message }, { status: 500 });
   }
 }
